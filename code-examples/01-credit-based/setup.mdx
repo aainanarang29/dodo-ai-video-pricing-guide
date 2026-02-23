@@ -1,0 +1,135 @@
+---
+title: 'Setup & Product Creation'
+description: 'Create credit packages in Dodo Payments for your AI video platform'
+---
+
+## Overview
+
+Credit-based pricing is ideal for AI video platforms where consumption varies by usage. This guide shows you how to set up credit packages using Dodo Payments.
+
+## Key Metrics
+- **Conversion Rate**: 8-15% (free → paid)
+- **ARPU**: $15-95
+- **Credit Math**: 1 credit = 4 seconds @ $0.25/credit
+- **Package Range**: 60-1500 credits
+
+## Create Credit Products
+
+```typescript
+import { DodoPayments } from '@dodopayments/dodo-payments';
+
+const dodo = new DodoPayments({
+  bearerToken: process.env.DODO_API_KEY!,
+  environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode',
+});
+
+async function createCreditPackages() {
+  // Starter Package - 60 credits ($15)
+  const starter = await dodo.products.create({
+    name: 'Starter Package',
+    description: '60 credits for AI video generation',
+    price: {
+      type: 'one_time_price',
+      price: 1500, // $15.00 in cents
+      currency: 'USD',
+      discount: 0,
+      purchasing_power_parity: false,
+      tax_inclusive: false
+    },
+    tax_category: 'digital_products',
+    metadata: {
+      credits: '60',
+      credit_value: '0.25',
+      package_tier: 'starter'
+    }
+  });
+
+  // Pro Package - 300 credits ($60, 20% discount)
+  const pro = await dodo.products.create({
+    name: 'Pro Package',
+    description: '300 credits for AI video generation',
+    price: {
+      type: 'one_time_price',
+      price: 6000, // $60.00 in cents
+      currency: 'USD',
+      discount: 20, // 20% discount from $75
+      purchasing_power_parity: false,
+      tax_inclusive: false
+    },
+    tax_category: 'digital_products',
+    metadata: {
+      credits: '300',
+      credit_value: '0.20',
+      package_tier: 'pro',
+      savings: '15.00'
+    }
+  });
+
+  // Enterprise Package - 1500 credits ($250, 33% discount)
+  const enterprise = await dodo.products.create({
+    name: 'Enterprise Package',
+    description: '1500 credits for AI video generation',
+    price: {
+      type: 'one_time_price',
+      price: 25000, // $250.00 in cents
+      currency: 'USD',
+      discount: 33, // 33% discount from $375
+      purchasing_power_parity: false,
+      tax_inclusive: false
+    },
+    tax_category: 'digital_products',
+    metadata: {
+      credits: '1500',
+      credit_value: '0.167',
+      package_tier: 'enterprise',
+      savings: '125.00',
+      priority_support: 'true'
+    }
+  });
+
+  console.log('Credit packages created:', { starter, pro, enterprise });
+  return { starter, pro, enterprise };
+}
+```
+
+## Database Schema
+
+Store credits in your database:
+
+```sql
+CREATE TABLE user_credits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  balance INTEGER NOT NULL DEFAULT 0,
+  total_purchased INTEGER NOT NULL DEFAULT 0,
+  total_consumed INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+
+CREATE TABLE credit_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  type VARCHAR(20) NOT NULL, -- 'purchase', 'consumption', 'bonus', 'refund'
+  amount INTEGER NOT NULL,
+  balance_after INTEGER NOT NULL,
+  payment_id VARCHAR(255),
+  video_id VARCHAR(255),
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_credit_transactions_user ON credit_transactions(user_id, created_at DESC);
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Purchase Flow" icon="shopping-cart" href="/code-examples/01-credit-based/purchase-flow">
+    Handle credit purchases with webhooks
+  </Card>
+  <Card title="Deduction Logic" icon="minus" href="/code-examples/01-credit-based/deduction">
+    Deduct credits during video generation
+  </Card>
+</CardGroup>

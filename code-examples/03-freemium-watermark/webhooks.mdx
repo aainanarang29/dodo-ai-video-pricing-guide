@@ -1,0 +1,47 @@
+---
+title: 'Webhook Processing'
+description: 'Handle payment webhooks for export unlocking'
+---
+
+## Webhook Handler
+
+```typescript
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const event = req.body;
+
+  if (event.type === 'payment.succeeded') {
+    const { metadata, customer } = event.data;
+
+    if (metadata.export_type === 'single') {
+      // Single export purchase
+      await unlockSingleExport({
+        userId: customer.customer_id,
+        videoId: metadata.video_id,
+        paymentId: event.data.payment_id
+      });
+    }
+  }
+
+  if (event.type === 'subscription.active') {
+    // Pro subscription activated
+    await upgradeToPro({
+      userId: event.data.customer.customer_id,
+      subscriptionId: event.data.subscription_id
+    });
+  }
+
+  return res.status(200).json({ received: true });
+}
+
+async function unlockSingleExport({ userId, videoId, paymentId }) {
+  await db.query(`
+    UPDATE videos
+    SET watermark = false,
+        export_payment_id = $1
+    WHERE id = $2 AND user_id = $3
+  `, [paymentId, videoId, userId]);
+
+  // Trigger export
+  await exportVideo(videoId, true);
+}
+```

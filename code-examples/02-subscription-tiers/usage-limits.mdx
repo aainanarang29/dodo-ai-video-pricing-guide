@@ -1,0 +1,92 @@
+---
+title: 'Usage Limits & Enforcement'
+description: 'Enforce monthly video generation limits for subscription tiers'
+---
+
+## Check Video Limit Before Generation
+
+```typescript
+async function checkVideoLimit(userId: string): Promise<boolean> {
+  const subscription = await db.query(`
+    SELECT * FROM user_subscriptions
+    WHERE user_id = $1 AND status = 'active'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `, [userId]);
+
+  if (!subscription.rows.length) {
+    return false; // No active subscription
+  }
+
+  const sub = subscription.rows[0];
+  
+  // Unlimited tier check
+  if (sub.tier === 'enterprise' || sub.videos_limit === null) {
+    return true;
+  }
+
+  // Check monthly usage
+  return sub.videos_used_this_period < sub.videos_limit;
+}
+
+async function incrementVideoUsage(userId: string) {
+  await db.query(`
+    UPDATE user_subscriptions
+    SET videos_used_this_period = videos_used_this_period + 1,
+        updated_at = NOW()
+    WHERE user_id = $1 AND status = 'active'
+  `, [userId]);
+}
+```
+
+## Reset Monthly Usage
+
+```typescript
+async function resetMonthlyUsage(subscriptionId: string) {
+  await db.query(`
+    UPDATE user_subscriptions
+    SET videos_used_this_period = 0,
+        current_period_start = $1,
+        current_period_end = $2,
+        updated_at = NOW()
+    WHERE subscription_id = $3
+  `, [newPeriodStart, newPeriodEnd, subscriptionId]);
+}
+```
+
+## Frontend Usage Display
+
+```typescript
+export function UsageIndicator() {
+  const { data } = useQuery(['usage'], fetchUsage);
+
+  if (!data) return null;
+
+  const percentage = (data.used / data.limit) * 100;
+  const isNearLimit = percentage >= 80;
+
+  return (
+    <div className="p-4 bg-white rounded-lg shadow">
+      <div className="flex justify-between mb-2">
+        <span className="text-sm font-medium">Videos This Month</span>
+        <span className="text-sm">{data.used} / {data.limit}</span>
+      </div>
+      
+      <div className="w-full bg-gray-200 rounded-full h-2">
+        <div 
+          className={`h-2 rounded-full transition-all ${
+            isNearLimit ? 'bg-red-500' : 'bg-blue-500'
+          }`}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+
+      {isNearLimit && (
+        <div className="mt-2 text-sm text-orange-600">
+          You're running low! Upgrade to Pro for 200 videos/month.
+        </div>
+      )}
+    </div>
+  );
+}
+```

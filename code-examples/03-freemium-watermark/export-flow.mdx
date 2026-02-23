@@ -1,0 +1,100 @@
+---
+title: 'Export Flow & Watermark Removal'
+description: 'Handle paid exports and watermark removal'
+---
+
+## Frontend Export Flow
+
+```typescript
+export function ExportButton({ videoId }: { videoId: string }) {
+  const { user } = useAuth();
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  const handleExport = async () => {
+    // Check if user has Pro subscription
+    if (user.tier === 'pro') {
+      // Export immediately without watermark
+      await exportVideo(videoId, false);
+      return;
+    }
+
+    // Show paywall for free users
+    setShowPaywall(true);
+  };
+
+  return (
+    <>
+      <button onClick={handleExport}>
+        Export Video
+      </button>
+
+      {showPaywall && (
+        <ExportPaywall videoId={videoId} onClose={() => setShowPaywall(false)} />
+      )}
+    </>
+  );
+}
+
+function ExportPaywall({ videoId }: { videoId: string }) {
+  return (
+    <div className="modal">
+      <h2>Remove Watermark</h2>
+      
+      <div className="options">
+        <PriceOption
+          title="Single Export"
+          price="$9.99"
+          description="Remove watermark from this video"
+          onClick={() => purchaseSingleExport(videoId)}
+        />
+        
+        <PriceOption
+          title="Pro Plan"
+          price="$24/month"
+          description="Unlimited watermark-free exports"
+          badge="Best Value"
+          onClick={() => upgradeToPro()}
+        />
+      </div>
+      
+      <button onClick={() => downloadWithWatermark(videoId)}>
+        Download with watermark (Free)
+      </button>
+    </div>
+  );
+}
+```
+
+## Backend Export Handler
+
+```typescript
+async function exportVideo(videoId: string, removeWatermark: boolean) {
+  const video = await db.query(
+    'SELECT * FROM videos WHERE id = $1',
+    [videoId]
+  );
+
+  if (!video.rows.length) {
+    throw new Error('Video not found');
+  }
+
+  // Generate export URL
+  const exportUrl = await generateExport({
+    videoId,
+    watermark: !removeWatermark,
+    quality: 'high'
+  });
+
+  // Save export record
+  await db.query(`
+    INSERT INTO exports (video_id, user_id, watermark_removed, download_url)
+    VALUES ($1, $2, $3, $4)
+  `, [videoId, video.rows[0].user_id, removeWatermark, exportUrl]);
+
+  return exportUrl;
+}
+```
+
+<Card title="Webhook Handler" icon="webhook" href="/code-examples/03-freemium-watermark/webhooks">
+  Process payments and enable exports
+</Card>

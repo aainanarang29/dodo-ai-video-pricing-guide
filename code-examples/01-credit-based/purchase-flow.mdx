@@ -1,0 +1,274 @@
+---
+title: 'Purchase Flow & Webhooks'
+description: 'Handle credit purchases and process webhook events from Dodo Payments'
+---
+
+## Payment Webhook Handler
+
+When a user completes a credit purchase, Dodo sends a `payment.succeeded` webhook. Process it to add credits to their account:
+
+```typescript
+import { DodoPayments } from '@dodopayments/dodo-payments';
+import type { NextApiRequest, NextApiResponse } from 'next';
+
+const dodo = new DodoPayments({
+  bearerToken: process.env.DODO_API_KEY!,
+  environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode',
+});
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    // Verify webhook signature
+    const signature = req.headers['x-dodo-signature'] as string;
+    const isValid = await dodo.webhooks.verify(signature, req.body);
+    
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
+
+    const event = req.body;
+
+    // Handle payment.succeeded event
+    if (event.type === 'payment.succeeded') {
+      const payment = event.data;
+      const customerId = payment.customer.customer_id;
+      const productMetadata = payment.line_items[0].metadata;
+      
+      // Extract credits from product metadata
+      const credits = parseInt(productMetadata.credits);
+      const tier = productMetadata.package_tier;
+
+      // Add credits to user account
+      await addCreditsToUser({
+        userId: customerId,
+        credits,
+        paymentId: payment.payment_id,
+        tier,
+        amount: payment.total_amount
+      });
+
+      // Send confirmation email
+      await sendCreditPurchaseEmail(customerId, credits, tier);
+
+      console.log(`Added ${credits} credits to user ${customerId}`);
+    }
+
+    return res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return res.status(500).json({ error: 'Webhook processing failed' });
+  }
+}
+
+async function addCreditsToUser({ 
+  userId, 
+  credits, 
+  paymentId, 
+  tier, 
+  amount 
+}: {
+  userId: string;
+  credits: number;
+  paymentId: string;
+  tier: string;
+  amount: number;
+}) {
+  // Update user credits (use your database)
+  const result = await db.query(`
+    INSERT INTO user_credits (user_id, balance, total_purchased)
+    VALUES ($1, $2, $2)
+    ON CONFLICT (user_id) 
+    DO UPDATE SET 
+      balance = user_credits.balance + $2,
+      total_purchased = user_credits.total_purchased + $2,
+      updated_at = NOW()
+    RETURNING *
+  `, [userId, credits]);
+
+  // Log transaction
+  await db.query(`
+    INSERT INTO credit_transactions 
+      (user_id, type, amount, balance_after, payment_id, metadata)
+    VALUES ($1, 'purchase', $2, $3, $4, $5)
+  `, [
+    userId,
+    credits,
+    result.rows[0].balance,
+    paymentId,
+    JSON.stringify({ tier, amount_paid: amount })
+  ]);
+
+  return result.rows[0];
+}
+
+async function sendCreditPurchaseEmail(
+  userId: string, 
+  credits: number, 
+  tier: string
+) {
+  // Your email service (e.g., Resend, SendGrid)
+  await emailService.send({
+    to: userId, // or fetch user email
+    subject: `${credits} credits added to your account`,
+    template: 'credit-purchase-confirmation',
+    data: { credits, tier }
+  });
+}
+```
+
+## Frontend Checkout Flow
+
+Create a checkout session on the frontend:
+
+```typescript
+import { useState } from 'react';
+
+export function CreditPurchase() {
+  const [loading, setLoading] = useState(false);
+
+  const handlePurchase = async (packageId: string) => {
+    setLoading(true);
+    
+    try {
+      const response = await fetch('/api/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ packageId })
+      });
+
+      const { checkoutUrl } = await response.json();
+      
+      // Redirect to Dodo checkout
+      window.location.href = checkoutUrl;
+    } catch (error) {
+      console.error('Purchase failed:', error);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      {/* Starter Package */}
+      <PriceCard
+        title="Starter"
+        credits={60}
+        price="$15"
+        perCredit="$0.25"
+        onPurchase={() => handlePurchase('starter')}
+        loading={loading}
+      />
+      
+      {/* Pro Package */}
+      <PriceCard
+        title="Pro"
+        credits={300}
+        price="$60"
+        perCredit="$0.20"
+        savings="$15"
+        popular
+        onPurchase={() => handlePurchase('pro')}
+        loading={loading}
+      />
+      
+      {/* Enterprise Package */}
+      <PriceCard
+        title="Enterprise"
+        credits={1500}
+        price="$250"
+        perCredit="$0.17"
+        savings="$125"
+        onPurchase={() => handlePurchase('enterprise')}
+        loading={loading}
+      />
+    </div>
+  );
+}
+```
+
+## Create Checkout Session (Backend)
+
+```typescript
+import { DodoPayments } from '@dodopayments/dodo-payments';
+
+export async function POST(req: Request) {
+  const { packageId } = await req.json();
+  const userId = await getCurrentUserId(req); // Your auth logic
+
+  const dodo = new DodoPayments({
+    bearerToken: process.env.DODO_API_KEY!,
+    environment: 'live_mode'
+  });
+
+  // Get product ID based on package tier
+  const productIds = {
+    starter: process.env.STARTER_PRODUCT_ID!,
+    pro: process.env.PRO_PRODUCT_ID!,
+    enterprise: process.env.ENTERPRISE_PRODUCT_ID!
+  };
+
+  const checkout = await dodo.checkoutSessions.create({
+    product_cart: [{
+      product_id: productIds[packageId],
+      quantity: 1
+    }],
+    customer: {
+      customer_id: userId
+    },
+    return_url: `${process.env.APP_URL}/credits/success`,
+    metadata: {
+      package_tier: packageId,
+      user_id: userId
+    }
+  });
+
+  return Response.json({ 
+    checkoutUrl: checkout.url 
+  });
+}
+```
+
+## Testing Webhooks Locally
+
+Use ngrok to test webhooks:
+
+```bash
+# Start ngrok
+ngrok http 3000
+
+# Update webhook URL in Dodo Dashboard
+https://your-ngrok-url.ngrok.io/api/webhooks/dodo
+
+# Monitor webhook events
+tail -f logs/webhooks.log
+```
+
+## Error Handling
+
+```typescript
+// Add idempotency check
+async function addCreditsToUser({ userId, credits, paymentId }) {
+  // Check if payment already processed
+  const existing = await db.query(`
+    SELECT * FROM credit_transactions 
+    WHERE payment_id = $1
+  `, [paymentId]);
+
+  if (existing.rows.length > 0) {
+    console.log(`Payment ${paymentId} already processed`);
+    return existing.rows[0];
+  }
+
+  // Process new payment
+  // ... rest of the code
+}
+```
+
+## Next Steps
+
+<Card title="Credit Deduction" icon="video" href="/code-examples/01-credit-based/deduction">
+  Implement credit deduction during video generation
+</Card>

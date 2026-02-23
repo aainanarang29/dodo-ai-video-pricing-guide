@@ -1,0 +1,361 @@
+---
+title: 'Subscription Products'
+description: 'Create tiered subscription products with usage limits'
+---
+
+## Overview
+
+Tiered subscriptions provide predictable recurring revenue with different feature levels. This model works well for AI video platforms targeting professional users who need consistent access.
+
+## Key Metrics
+- **Conversion Rate**: 7-12% (free → paid)
+- **Tier Upgrades**: 15-25% of active subscribers
+- **Churn**: 3-5% monthly
+- **Price Range**: $18-89/month
+
+## Create Subscription Tiers
+
+```typescript
+import { DodoPayments } from '@dodopayments/dodo-payments';
+
+const dodo = new DodoPayments({
+  bearerToken: process.env.DODO_API_KEY!,
+  environment: 'live_mode'
+});
+
+async function createSubscriptionTiers() {
+  // Basic Tier - $29/month
+  const basic = await dodo.products.create({
+    name: 'Basic Plan',
+    description: '50 videos per month, 720p quality',
+    price: {
+      type: 'recurring_price',
+      price: 2900, // $29.00 in cents
+      currency: 'USD',
+      payment_frequency_count: 1,
+      payment_frequency_interval: 'Month',
+      subscription_period_count: 1,
+      subscription_period_interval: 'Month',
+      trial_period_days: 14,
+      discount: 0,
+      purchasing_power_parity: false,
+      tax_inclusive: false
+    },
+    tax_category: 'saas',
+    metadata: {
+      tier: 'basic',
+      videos_per_month: '50',
+      max_resolution: '720p',
+      max_duration: '30',
+      watermark: 'false',
+      priority_support: 'false',
+      api_access: 'false'
+    }
+  });
+
+  // Pro Tier - $79/month
+  const pro = await dodo.products.create({
+    name: 'Pro Plan',
+    description: '200 videos per month, 1080p quality, no watermark',
+    price: {
+      type: 'recurring_price',
+      price: 7900, // $79.00 in cents
+      currency: 'USD',
+      payment_frequency_count: 1,
+      payment_frequency_interval: 'Month',
+      subscription_period_count: 1,
+      subscription_period_interval: 'Month',
+      trial_period_days: 14,
+      discount: 0,
+      purchasing_power_parity: false,
+      tax_inclusive: false
+    },
+    tax_category: 'saas',
+    metadata: {
+      tier: 'pro',
+      videos_per_month: '200',
+      max_resolution: '1080p',
+      max_duration: '60',
+      watermark: 'false',
+      priority_support: 'true',
+      api_access: 'false',
+      batch_processing: 'true'
+    }
+  });
+
+  // Enterprise Tier - $299/month
+  const enterprise = await dodo.products.create({
+    name: 'Enterprise Plan',
+    description: 'Unlimited videos, 4K quality, API access',
+    price: {
+      type: 'recurring_price',
+      price: 29900, // $299.00 in cents
+      currency: 'USD',
+      payment_frequency_count: 1,
+      payment_frequency_interval: 'Month',
+      subscription_period_count: 1,
+      subscription_period_interval: 'Month',
+      trial_period_days: 0, // No trial for enterprise
+      discount: 0,
+      purchasing_power_parity: false,
+      tax_inclusive: false
+    },
+    tax_category: 'saas',
+    metadata: {
+      tier: 'enterprise',
+      videos_per_month: 'unlimited',
+      max_resolution: '4K',
+      max_duration: '300',
+      watermark: 'false',
+      priority_support: 'true',
+      api_access: 'true',
+      batch_processing: 'true',
+      custom_models: 'true',
+      dedicated_account_manager: 'true'
+    }
+  });
+
+  return { basic, pro, enterprise };
+}
+```
+
+## Annual Billing (38% Discount)
+
+Offer annual plans to improve cash flow and reduce churn:
+
+```typescript
+async function createAnnualTiers() {
+  // Basic Annual - $18/month ($216/year vs $348)
+  const basicAnnual = await dodo.products.create({
+    name: 'Basic Plan (Annual)',
+    description: 'Save 38% with annual billing',
+    price: {
+      type: 'recurring_price',
+      price: 21600, // $216.00 for the year
+      currency: 'USD',
+      payment_frequency_count: 1,
+      payment_frequency_interval: 'Year',
+      subscription_period_count: 1,
+      subscription_period_interval: 'Year',
+      trial_period_days: 14,
+      discount: 38, // 38% off monthly pricing
+      purchasing_power_parity: false,
+      tax_inclusive: false
+    },
+    tax_category: 'saas',
+    metadata: {
+      tier: 'basic',
+      billing_cycle: 'annual',
+      monthly_equivalent: '18.00',
+      savings_vs_monthly: '132.00',
+      videos_per_month: '50',
+      max_resolution: '720p'
+    }
+  });
+
+  // Pro Annual - $49/month ($588/year vs $948)
+  const proAnnual = await dodo.products.create({
+    name: 'Pro Plan (Annual)',
+    description: 'Save 38% with annual billing',
+    price: {
+      type: 'recurring_price',
+      price: 58800,
+      currency: 'USD',
+      payment_frequency_count: 1,
+      payment_frequency_interval: 'Year',
+      subscription_period_count: 1,
+      subscription_period_interval: 'Year',
+      trial_period_days: 14,
+      discount: 38,
+      purchasing_power_parity: false,
+      tax_inclusive: false
+    },
+    tax_category: 'saas',
+    metadata: {
+      tier: 'pro',
+      billing_cycle: 'annual',
+      monthly_equivalent: '49.00',
+      savings_vs_monthly: '360.00',
+      videos_per_month: '200',
+      max_resolution: '1080p'
+    }
+  });
+
+  return { basicAnnual, proAnnual };
+}
+```
+
+## Database Schema
+
+Track subscription status and usage:
+
+```sql
+CREATE TABLE user_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  subscription_id VARCHAR(255) NOT NULL UNIQUE,
+  tier VARCHAR(50) NOT NULL,
+  status VARCHAR(50) NOT NULL,
+  current_period_start TIMESTAMP,
+  current_period_end TIMESTAMP,
+  videos_used_this_period INTEGER DEFAULT 0,
+  videos_limit INTEGER,
+  billing_cycle VARCHAR(20), -- 'monthly', 'annual'
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  cancelled_at TIMESTAMP,
+  UNIQUE(user_id, subscription_id)
+);
+
+CREATE TABLE video_generations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  subscription_id VARCHAR(255) REFERENCES user_subscriptions(subscription_id),
+  video_url VARCHAR(500),
+  resolution VARCHAR(10),
+  duration INTEGER,
+  status VARCHAR(50),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_subscriptions_user ON user_subscriptions(user_id);
+CREATE INDEX idx_subscriptions_status ON user_subscriptions(status);
+CREATE INDEX idx_videos_user_period ON video_generations(user_id, created_at);
+```
+
+## Webhook Handler
+
+```typescript
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const event = req.body;
+
+  switch (event.type) {
+    case 'subscription.active':
+      // New subscription activated
+      await handleSubscriptionActive(event.data);
+      break;
+
+    case 'subscription.renewed':
+      // Reset monthly usage
+      await resetMonthlyUsage(event.data.subscription_id);
+      break;
+
+    case 'subscription.cancelled':
+      // Mark subscription as cancelled
+      await handleSubscriptionCancelled(event.data);
+      break;
+
+    case 'subscription.on_hold':
+      // Payment failed, suspend access
+      await suspendSubscription(event.data);
+      break;
+  }
+
+  return res.status(200).json({ received: true });
+}
+
+async function handleSubscriptionActive(subscription: any) {
+  const metadata = subscription.metadata;
+  
+  await db.query(`
+    INSERT INTO user_subscriptions 
+      (user_id, subscription_id, tier, status, 
+       current_period_start, current_period_end, videos_limit, billing_cycle)
+    VALUES ($1, $2, $3, 'active', $4, $5, $6, $7)
+    ON CONFLICT (subscription_id) 
+    DO UPDATE SET 
+      status = 'active',
+      current_period_start = $4,
+      current_period_end = $5,
+      updated_at = NOW()
+  `, [
+    subscription.customer.customer_id,
+    subscription.subscription_id,
+    metadata.tier,
+    subscription.current_period_start,
+    subscription.current_period_end,
+    parseInt(metadata.videos_per_month),
+    metadata.billing_cycle || 'monthly'
+  ]);
+}
+```
+
+## Pricing Page Display
+
+```typescript
+export function SubscriptionPricing() {
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+
+  const tiers = [
+    {
+      name: 'Basic',
+      monthly: 29,
+      annual: 18,
+      videos: 50,
+      features: [
+        '50 videos/month',
+        '720p quality',
+        'Up to 30s duration',
+        'Email support'
+      ]
+    },
+    {
+      name: 'Pro',
+      monthly: 79,
+      annual: 49,
+      videos: 200,
+      popular: true,
+      features: [
+        '200 videos/month',
+        '1080p quality',
+        'Up to 60s duration',
+        'No watermark',
+        'Priority support',
+        'Batch processing'
+      ]
+    },
+    {
+      name: 'Enterprise',
+      monthly: 299,
+      annual: 186,
+      videos: 'Unlimited',
+      features: [
+        'Unlimited videos',
+        '4K quality',
+        'Up to 5min duration',
+        'API access',
+        'Custom models',
+        'Dedicated manager'
+      ]
+    }
+  ];
+
+  return (
+    <div>
+      <BillingToggle value={billingCycle} onChange={setBillingCycle} />
+      
+      <div className="grid grid-cols-3 gap-6 mt-8">
+        {tiers.map(tier => (
+          <PricingCard
+            key={tier.name}
+            {...tier}
+            price={billingCycle === 'monthly' ? tier.monthly : tier.annual}
+            savings={billingCycle === 'annual' ? (tier.monthly * 12) - (tier.annual * 12) : 0}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Usage Limits" icon="gauge" href="/code-examples/02-subscription-tiers/usage-limits">
+    Enforce monthly video limits
+  </Card>
+  <Card title="Upgrades" icon="arrow-up" href="/code-examples/02-subscription-tiers/upgrades">
+    Handle tier upgrades with proration
+  </Card>
+</CardGroup>

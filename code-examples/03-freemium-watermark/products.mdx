@@ -1,0 +1,112 @@
+---
+title: 'Freemium Products Setup'
+description: 'Create free tier with watermark and paid upgrade path'
+---
+
+## Overview
+
+Freemium with watermark removal achieves the highest conversion rates (25-34%) by letting users create unlimited videos for free, then charging to export without branding.
+
+## Create Products
+
+```typescript
+async function createFreemiumProducts() {
+  const dodo = new DodoPayments({
+    bearerToken: process.env.DODO_API_KEY!,
+    environment: 'live_mode'
+  });
+
+  // Free tier (no payment required)
+  // Just track in your database, no Dodo product needed
+  const freeTier = {
+    tier: 'free',
+    price: 0,
+    features: {
+      videos_per_month: 'unlimited',
+      exports_with_watermark: 'unlimited',
+      exports_without_watermark: 0,
+      max_resolution: '1080p',
+      max_duration: '30'
+    }
+  };
+
+  // Single Export - $9.99
+  const singleExport = await dodo.products.create({
+    name: 'Single Export (No Watermark)',
+    description: 'Remove watermark from one video',
+    price: {
+      type: 'one_time_price',
+      price: 999,
+      currency: 'USD',
+      discount: 0,
+      purchasing_power_parity: false,
+      tax_inclusive: false
+    },
+    tax_category: 'digital_products',
+    metadata: {
+      export_type: 'single',
+      removes_watermark: 'true',
+      videos_included: '1'
+    }
+  });
+
+  // Pro Monthly - $24/month
+  const proMonthly = await dodo.products.create({
+    name: 'Pro Plan',
+    description: 'Unlimited watermark-free exports',
+    price: {
+      type: 'recurring_price',
+      price: 2400,
+      currency: 'USD',
+      payment_frequency_count: 1,
+      payment_frequency_interval: 'Month',
+      subscription_period_count: 1,
+      subscription_period_interval: 'Month',
+      trial_period_days: 7,
+      discount: 0,
+      purchasing_power_parity: false,
+      tax_inclusive: false
+    },
+    tax_category: 'saas',
+    metadata: {
+      tier: 'pro',
+      exports_without_watermark: 'unlimited',
+      max_resolution: '4K',
+      max_duration: '60',
+      priority_rendering: 'true'
+    }
+  });
+
+  return { singleExport, proMonthly };
+}
+```
+
+## Database Schema
+
+```sql
+CREATE TABLE videos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  title VARCHAR(255),
+  duration INTEGER,
+  resolution VARCHAR(10),
+  watermark BOOLEAN DEFAULT true,
+  exported BOOLEAN DEFAULT false,
+  export_payment_id VARCHAR(255),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE exports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  video_id UUID REFERENCES videos(id),
+  user_id UUID NOT NULL,
+  payment_id VARCHAR(255),
+  watermark_removed BOOLEAN DEFAULT false,
+  download_url VARCHAR(500),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+<Card title="Export Flow" icon="download" href="/code-examples/03-freemium-watermark/export-flow">
+  Implement watermark removal on payment
+</Card>

@@ -1,0 +1,163 @@
+---
+title: 'Code Examples'
+description: 'Production-ready implementation guides for AI video pricing models'
+---
+
+## Available Pricing Models
+
+This section contains complete implementation guides for 7 different pricing models used by leading AI video platforms. Each guide includes production-ready code using Dodo Payments.
+
+### 1. Credit-Based Pricing (Runway Model)
+Best for variable consumption patterns
+
+<CardGroup cols={3}>
+  <Card title="Setup" icon="gear" href="/code-examples/01-credit-based/setup">
+    Create credit packages
+  </Card>
+  <Card title="Purchase Flow" icon="shopping-cart" href="/code-examples/01-credit-based/purchase-flow">
+    Handle credit purchases
+  </Card>
+  <Card title="Deduction" icon="minus" href="/code-examples/01-credit-based/deduction">
+    Deduct credits on usage
+  </Card>
+</CardGroup>
+
+**Metrics**: 8-15% conversion, $15-95 ARPU
+
+---
+
+### 2. Subscription Tiers (Synthesia Model)
+Predictable recurring revenue with usage limits
+
+<CardGroup cols={3}>
+  <Card title="Products" icon="layer-group" href="/code-examples/02-subscription-tiers/products">
+    Create subscription tiers
+  </Card>
+  <Card title="Usage Limits" icon="gauge" href="/code-examples/02-subscription-tiers/usage-limits">
+    Enforce monthly limits
+  </Card>
+  <Card title="Upgrades" icon="arrow-up" href="/code-examples/02-subscription-tiers/upgrades">
+    Handle tier upgrades
+  </Card>
+</CardGroup>
+
+**Metrics**: 7-12% conversion, 15-25% upgrade rate
+
+---
+
+### 3. Freemium with Watermark (VEED Model)
+Highest conversion through free tier
+
+<CardGroup cols={3}>
+  <Card title="Products" icon="star" href="/code-examples/03-freemium-watermark/products">
+    Setup free & paid tiers
+  </Card>
+  <Card title="Export Flow" icon="download" href="/code-examples/03-freemium-watermark/export-flow">
+    Watermark removal flow
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/code-examples/03-freemium-watermark/webhooks">
+    Process payments
+  </Card>
+</CardGroup>
+
+**Metrics**: 25-34% conversion (highest), $9-24 ARPU
+
+---
+
+## Implementation Stack
+
+All examples use:
+- **Payments**: Dodo Payments SDK
+- **Backend**: TypeScript/Node.js
+- **Database**: PostgreSQL
+- **Frontend**: React/Next.js
+
+## Quick Start
+
+```bash
+# Install Dodo Payments SDK
+npm install @dodopayments/dodo-payments
+
+# Set environment variables
+DODO_API_KEY=your_api_key_here
+NODE_ENV=production
+
+# Run migrations
+npm run db:migrate
+
+# Start development server
+npm run dev
+```
+
+## Common Patterns
+
+### 1. Initialize Dodo Client
+
+```typescript
+import { DodoPayments } from '@dodopayments/dodo-payments';
+
+const dodo = new DodoPayments({
+  bearerToken: process.env.DODO_API_KEY!,
+  environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode',
+});
+```
+
+### 2. Create Product
+
+```typescript
+const product = await dodo.products.create({
+  name: 'Pro Plan',
+  description: 'Professional features',
+  price: {
+    type: 'recurring_price',
+    price: 2900, // $29.00 in cents
+    currency: 'USD',
+    payment_frequency_count: 1,
+    payment_frequency_interval: 'Month',
+    // ... other price config
+  },
+  tax_category: 'saas',
+  metadata: {
+    tier: 'pro',
+    custom_field: 'value'
+  }
+});
+```
+
+### 3. Handle Webhook
+
+```typescript
+export default async function handler(req, res) {
+  const event = req.body;
+
+  switch (event.type) {
+    case 'payment.succeeded':
+      await handlePaymentSuccess(event.data);
+      break;
+    case 'subscription.active':
+      await handleSubscriptionActive(event.data);
+      break;
+  }
+
+  return res.status(200).json({ received: true });
+}
+```
+
+## Additional Models
+
+Complete implementations for 4 more advanced models are available in the full repository:
+
+- **Metered Billing**: Usage-based pricing for enterprises
+- **Hybrid Model**: Subscriptions + credit top-ups
+- **Enterprise Pooling**: Team account management
+- **Custom Enterprise**: White-glove pricing
+
+<Card title="View Complete Guide" icon="book" href="/blog/complete-pricing-guide">
+  See all 7 pricing models with metrics and benchmarks
+</Card>
+
+## Need Help?
+
+- [Dodo Payments Documentation](https://docs.dodopayments.com)
+- [GitHub Repository](https://github.com/dodopayments/ai-video-pricing-guide)
+- [Discord Community](https://discord.gg/dodopayments)

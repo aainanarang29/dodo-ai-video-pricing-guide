@@ -1,0 +1,70 @@
+---
+title: 'Tier Upgrades & Proration'
+description: 'Handle subscription upgrades with automatic proration'
+---
+
+## Upgrade Subscription Tier
+
+```typescript
+import { DodoPayments } from '@dodopayments/dodo-payments';
+
+async function upgradeSubscription(
+  subscriptionId: string,
+  newTierId: string
+) {
+  const dodo = new DodoPayments({
+    bearerToken: process.env.DODO_API_KEY!,
+    environment: 'live_mode'
+  });
+
+  // Dodo automatically handles proration
+  const upgraded = await dodo.subscriptions.changePlan(subscriptionId, {
+    product_id: newTierId,
+    quantity: 1,
+    proration_billing_mode: 'prorated_immediately', // or 'full_immediately'
+    addons: [] // Keep or change addons
+  });
+
+  // Update local database
+  await db.query(`
+    UPDATE user_subscriptions
+    SET tier = $1,
+        videos_limit = $2,
+        updated_at = NOW()
+    WHERE subscription_id = $3
+  `, [newTier, newLimit, subscriptionId]);
+
+  return upgraded;
+}
+```
+
+## Frontend Upgrade Flow
+
+```typescript
+export function UpgradeModal({ currentTier }: { currentTier: string }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleUpgrade = async (newTier: string) => {
+    setLoading(true);
+    try {
+      await fetch('/api/subscription/upgrade', {
+        method: 'POST',
+        body: JSON.stringify({ newTier })
+      });
+      router.push('/dashboard?upgraded=true');
+    } catch (error) {
+      console.error('Upgrade failed:', error);
+    }
+  };
+
+  return (
+    <div className="p-6">
+      <h2>Upgrade to Pro</h2>
+      <p>Get 4x more videos + priority support</p>
+      <button onClick={() => handleUpgrade('pro')}>
+        Upgrade Now - $79/month
+      </button>
+    </div>
+  );
+}
+```

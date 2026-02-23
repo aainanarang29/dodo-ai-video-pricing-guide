@@ -1,0 +1,3023 @@
+---
+title: 'The Complete Guide to AI Video Pricing: 7 Models That Actually Work'
+description: 'Build a sustainable pricing strategy for your AI video tool. From credit-based systems to enterprise deals, with real examples from Runway, Pika, and VEED.io plus implementation code using Dodo Payments.'
+sidebarTitle: 'AI Video Pricing Guide'
+icon: 'video'
+---
+
+# The Complete Guide to AI Video Pricing: 7 Models That Actually Work
+
+The AI video generation market is exploding. From Runway's cinematic Gen-4 model to Pika's social-first approach, tools that once cost $100,000 in traditional production now deliver professional results for $10/month.
+
+But here's the challenge: **the pricing models that work for traditional SaaS completely break with AI video.**
+
+Why? Because your costs are nonlinear, GPU-intensive, and wildly unpredictable. A single 5-second video generation can cost you $0.50 in compute. Scale that to 10,000 users, and you're looking at infrastructure costs that can sink your startup overnight.
+
+This guide breaks down the **7 pricing models** that actually work for AI video tools—backed by real data from companies processing millions in revenue, conversion rates from industry leaders, and full implementation code using Dodo Payments.
+
+<Note>
+**Who this guide is for:**
+- Founders building AI video generation, editing, or avatar tools
+- Product managers optimizing pricing for AI-powered video features
+- Developers implementing monetization for video APIs
+- Investors evaluating AI video business models
+</Note>
+
+## The AI Video Landscape in 2025
+
+The AI video generation market reached **$614.8 million in 2024** and is projected to hit **$2.56 billion by 2032** (CAGR: 19.5%). But unlike traditional SaaS, these tools face unique challenges:
+
+### The GPU Cost Crisis
+
+- **Runway's reality:** $15/month plan = ~50 seconds of Gen-4 video
+- **Canva's response:** Raised Teams pricing by 300% specifically for AI features
+- **Industry standard:** $0.50/second for premium models like Google Veo 3
+
+### Customer Expectations
+
+Users expect:
+- **Instant gratification** - videos in seconds, not hours
+- **Transparent pricing** - no surprise bills
+- **Quality options** - from draft mode to cinematic 4K
+- **Commercial rights** - no watermarks, full ownership
+
+### Competitive Benchmarks
+
+| Tool | Monthly Price | Credits/Month | Cost per 5s Video | Key Differentiator |
+|------|--------------|---------------|-------------------|-------------------|
+| Runway | $15 | 625 | ~$0.12 | Cinematic quality, 4K upscaling |
+| Pika | $10 | 700 | ~$0.07 | Fast generation, social-optimized |
+| Luma | $9.99 | 3,200 | ~$0.015 | Best value, fluid motion |
+| Synthesia | $29 | 10 min avatar | ~$2.90/min | Avatar-based, 60+ languages |
+
+## The 7 Pricing Models
+
+<CardGroup cols={2}>
+  <Card title="1. Credit-Based Pricing" icon="coins" href="#1-credit-based-pricing">
+    Pay-per-generation with packages. 8-15% conversion.
+  </Card>
+  <Card title="2. Subscription Tiers" icon="layer-group" href="#2-subscription-tiers">
+    Monthly limits on videos/minutes. 5-8% conversion.
+  </Card>
+  <Card title="3. Freemium + Watermark" icon="droplet" href="#3-freemium-watermark-removal">
+    Free with watermark, pay to remove. 25-34% conversion.
+  </Card>
+  <Card title="4. Pay-Per-Use" icon="credit-card" href="#4-pay-per-use-metered-billing">
+    True metered billing per second. API-first model.
+  </Card>
+  <Card title="5. Hybrid Model" icon="bolt" href="#5-hybrid-subscription-usage">
+    Base subscription + overage credits. Enterprise favorite.
+  </Card>
+  <Card title="6. Enterprise Credits" icon="building" href="#6-enterprise-credit-pooling">
+    Prepaid credits with team pooling. Predictable budgets.
+  </Card>
+  <Card title="7. Custom Enterprise" icon="handshake" href="#7-custom-enterprise-pricing">
+    Volume deals, white-label, dedicated GPU. High-touch sales.
+  </Card>
+</CardGroup>
+
+---
+
+## 1. Credit-Based Pricing
+
+**Best for:** Generation-focused tools (Runway, Pika, Luma)  
+**Conversion rate:** 8-15%  
+**Example ARR:** $50-150 per user
+
+### How It Works
+
+Users purchase credit packages. Each video generation consumes credits based on:
+- **Duration** (5s vs 10s)
+- **Quality** (480p vs 4K)
+- **Model** (Turbo vs Pro)
+- **Features** (camera control, style transfer)
+
+### Real-World Example: Runway ML
+
+**Pricing structure:**
+```
+Free:      125 credits/month
+Standard:  $15/month → 625 credits
+Pro:       $35/month → 2,250 credits
+Unlimited: $95/month → Relaxed mode after credits
+```
+
+**Credit consumption:**
+- Gen-4 Turbo (5s): 5 credits = ~$0.12
+- Gen-4 Standard (5s): 10 credits = ~$0.24  
+- Gen-4 4K upscale: +20 credits
+
+**Why it works:**
+- Aligns pricing with GPU costs
+- Users understand "credits = generations"
+- Natural upsell path (run out → upgrade)
+- Prevents abuse with metered limits
+
+### Implementation with Dodo Payments
+
+<CodeGroup>
+
+```typescript products.ts
+import { Dodo } from '@dodopayments/dodo-ts-sdk';
+
+const dodo = new Dodo({
+  bearerToken: process.env.DODO_API_KEY!,
+});
+
+// Create credit packages
+const creditPackages = [
+  {
+    name: 'Starter Pack',
+    price: 10_00, // $10 in cents
+    credits: 100,
+    bonus: 0,
+  },
+  {
+    name: 'Pro Pack',
+    price: 40_00, // $40
+    credits: 500,
+    bonus: 100, // 20% bonus
+  },
+  {
+    name: 'Business Pack',
+    price: 120_00, // $120
+    credits: 2000,
+    bonus: 500, // 25% bonus
+  }
+];
+
+export async function createCreditProducts() {
+  for (const pkg of creditPackages) {
+    await dodo.products.create({
+      name: pkg.name,
+      price: {
+        type: 'one_time_price',
+        price: pkg.price,
+        currency: 'USD',
+        discount: 0,
+        purchasing_power_parity: false,
+      },
+      tax_category: 'digital_products',
+      metadata: { 
+        credits: pkg.credits,
+        bonus_credits: pkg.bonus,
+        total_credits: pkg.credits + pkg.bonus,
+      },
+    });
+  }
+}
+```
+
+```typescript purchase.ts
+// Handle credit purchase
+export async function purchaseCredits(
+  userId: string, 
+  productId: string
+) {
+  const user = await db.user.findUnique({ 
+    where: { id: userId } 
+  });
+
+  // Create payment session
+  const payment = await dodo.payments.create({
+    payment_link: true,
+    product_cart: [
+      { product_id: productId, quantity: 1 }
+    ],
+    customer: {
+      email: user.email,
+      name: user.name,
+    },
+    billing: {
+      country: user.country || 'US',
+    },
+    return_url: `${process.env.APP_URL}/dashboard?purchase=success`,
+    metadata: {
+      user_id: userId,
+      purchase_type: 'credit_package',
+    },
+  });
+
+  return payment.payment_link;
+}
+```
+
+```typescript webhooks.ts
+// Webhook handler - add credits on successful payment
+export async function handlePaymentWebhook(event: any) {
+  if (event.type === 'payment.succeeded') {
+    const { user_id } = event.data.payment.metadata;
+    const product = event.data.payment.line_items[0];
+    const { total_credits } = product.metadata;
+
+    // Add credits atomically
+    await db.$transaction([
+      // Update user balance
+      db.user.update({
+        where: { id: user_id },
+        data: {
+          credits: {
+            increment: total_credits
+          }
+        }
+      }),
+      
+      // Log transaction
+      db.creditTransaction.create({
+        data: {
+          userId: user_id,
+          amount: total_credits,
+          type: 'purchase',
+          paymentId: event.data.payment.payment_id,
+          description: `Purchased ${product.name}`,
+        }
+      })
+    ]);
+  }
+}
+```
+
+```typescript consume.ts
+// Deduct credits for video generation
+export async function generateVideo(
+  userId: string, 
+  params: VideoGenerationParams
+) {
+  // Calculate credit cost
+  const creditCost = calculateCreditCost(params);
+
+  // Check balance
+  const user = await db.user.findUnique({ 
+    where: { id: userId } 
+  });
+  
+  if (!user || user.credits < creditCost) {
+    throw new Error('Insufficient credits');
+  }
+
+  // Deduct credits atomically
+  await db.$transaction([
+    db.user.update({
+      where: { id: userId },
+      data: { 
+        credits: { 
+          decrement: creditCost 
+        } 
+      }
+    }),
+    
+    db.creditTransaction.create({
+      data: {
+        userId,
+        amount: -creditCost,
+        type: 'video_generation',
+        description: `Generated ${params.duration}s video in ${params.quality}`,
+        metadata: params,
+      }
+    })
+  ]);
+
+  // Queue video generation (background job)
+  return await queueVideoGeneration(userId, params);
+}
+
+function calculateCreditCost(params: VideoGenerationParams): number {
+  const baseCredits = {
+    '5s': 10,
+    '10s': 20,
+  }[params.duration] || 10;
+
+  const qualityMultiplier = {
+    '480p': 1.0,
+    '720p': 1.5,
+    '1080p': 2.0,
+    '4K': 3.0,
+  }[params.quality] || 1.0;
+
+  const modelMultiplier = {
+    'turbo': 0.5,
+    'standard': 1.0,
+    'pro': 1.5,
+  }[params.model] || 1.0;
+
+  return Math.ceil(baseCredits * qualityMultiplier * modelMultiplier);
+}
+```
+
+</CodeGroup>
+
+### Volume Discount Strategy
+
+| Package | Price | Base Credits | Bonus % | Total Credits | Effective $/Credit |
+|---------|-------|--------------|---------|---------------|-------------------|
+| Starter | $10 | 100 | 0% | 100 | $0.10 |
+| Pro | $40 | 500 | 20% | 600 | $0.067 |
+| Business | $120 | 2,000 | 25% | 2,500 | $0.048 |
+
+**Psychology:** Bonus credits create urgency to upgrade without discounting
+
+### Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always show remaining credits prominently">
+    Display credit balance in:
+    - Dashboard header
+    - Before each generation
+    - "Low balance" warnings at 20% remaining
+    
+    **Runway insight:** Users who see their balance are 3x more likely to top up *before* running out
+  </Accordion>
+
+  <Accordion title="Price credits to cover 150% of GPU costs">
+    Example calculation:
+    - GPU cost for 5s Gen-4: $0.08
+    - Your credit cost: 10 credits @ $0.12 = **$0.12**
+    - Margin: 50% to cover overhead, failed generations, support
+  </Accordion>
+
+  <Accordion title="Offer 'starter' free credits">
+    Give new users 10-25 free credits (not unlimited):
+    - Creates immediate value demonstration
+    - Establishes "credit" mental model
+    - Triggers upgrade at depletion point
+    
+    **Avoid:** Unlimited free tier that hemorrhages GPU costs
+  </Accordion>
+
+  <Accordion title="Refund credits for failed generations">
+    ```typescript
+    if (generationStatus === 'failed') {
+      await db.user.update({
+        where: { id: userId },
+        data: { credits: { increment: creditCost } }
+      });
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+**Critical:** Never auto-charge for credits. Always require explicit purchase. Surprise bills kill trust.
+</Warning>
+
+---
+
+## 2. Subscription Tiers
+
+**Best for:** Avatar/editing tools (Synthesia, HeyGen, CapCut)  
+**Conversion rate:** 5-8%  
+**Example ARR:** $200-600 per user
+
+### How It Works
+
+Monthly subscription with clear usage limits:
+- **Minutes of video** generated/month
+- **Number of exports** per month
+- **Storage limits** for projects
+- **Feature access** (HD vs 4K, avatar library)
+
+### Real-World Example: Synthesia
+
+**Pricing structure:**
+```
+Starter:    $29/month → 10 minutes of avatar video
+Creator:    $89/month → 30 minutes + custom avatars
+Enterprise: Custom   → Unlimited + API access
+```
+
+**What happens at limit:**
+- **Soft limit:** Generate, but can't export (paywall)
+- **Hard limit:** Cannot generate more (upgrade required)
+- **Overage:** Additional minutes at $9/minute
+
+### Implementation with Dodo Payments
+
+<CodeGroup>
+
+```typescript subscription-products.ts
+// Create tiered subscription products
+const subscriptionTiers = [
+  {
+    name: 'Starter Plan',
+    price: 29_00, // $29/month
+    features: {
+      exports_per_month: 10,
+      max_duration_seconds: 60,
+      quality: '1080p',
+      storage_gb: 5,
+      features: ['basic_editor', 'stock_music'],
+    }
+  },
+  {
+    name: 'Creator Plan',
+    price: 89_00,
+    features: {
+      exports_per_month: 50,
+      max_duration_seconds: 300,
+      quality: '4K',
+      storage_gb: 50,
+      features: ['advanced_editor', 'stock_music', 'custom_branding'],
+    }
+  },
+  {
+    name: 'Pro Plan',
+    price: 199_00,
+    features: {
+      exports_per_month: -1, // unlimited
+      max_duration_seconds: 600,
+      quality: '4K',
+      storage_gb: 200,
+      features: ['all_features', 'priority_support', 'api_access'],
+    }
+  }
+];
+
+export async function createSubscriptionProducts() {
+  for (const tier of subscriptionTiers) {
+    await dodo.products.create({
+      name: tier.name,
+      price: {
+        type: 'recurring_price',
+        price: tier.price,
+        currency: 'USD',
+        payment_frequency_count: 1,
+        payment_frequency_interval: 'Month',
+        subscription_period_count: 1,
+        subscription_period_interval: 'Month',
+        trial_period_days: 14,
+        discount: 0,
+        purchasing_power_parity: false,
+      },
+      tax_category: 'saas',
+      metadata: tier.features,
+    });
+  }
+}
+```
+
+```typescript subscribe.ts
+// Create subscription for user
+export async function createSubscription(
+  userId: string, 
+  planId: string
+) {
+  const user = await db.user.findUnique({ 
+    where: { id: userId } 
+  });
+
+  const subscription = await dodo.subscriptions.create({
+    payment_link: true,
+    product_id: planId,
+    quantity: 1,
+    customer: {
+      email: user.email,
+      name: user.name,
+    },
+    billing: {
+      country: user.country || 'US',
+    },
+    metadata: {
+      user_id: userId,
+    },
+    return_url: `${process.env.APP_URL}/dashboard?subscription=success`,
+  });
+
+  return subscription.payment_link;
+}
+```
+
+```typescript usage-tracking.ts
+// Track monthly usage
+interface UsageTracker {
+  userId: string;
+  subscriptionId: string;
+  period: { start: Date; end: Date };
+  usage: {
+    exports_used: number;
+    storage_used_gb: number;
+  };
+  limits: {
+    exports_per_month: number;
+    storage_gb: number;
+  };
+}
+
+export async function canExportVideo(userId: string): Promise<{
+  allowed: boolean;
+  reason?: string;
+}> {
+  const subscription = await getCurrentSubscription(userId);
+  const usage = await getMonthlyUsage(userId);
+
+  // Check export limit (-1 means unlimited)
+  if (subscription.limits.exports_per_month !== -1 && 
+      usage.exports_used >= subscription.limits.exports_per_month) {
+    return {
+      allowed: false,
+      reason: `Monthly export limit reached (${usage.exports_used}/${subscription.limits.exports_per_month})`
+    };
+  }
+
+  return { allowed: true };
+}
+
+export async function recordExport(userId: string, videoSize: number) {
+  await db.usageRecord.create({
+    data: {
+      userId,
+      type: 'export',
+      timestamp: new Date(),
+      metadata: { videoSize },
+    }
+  });
+}
+```
+
+```typescript subscription-webhooks.ts
+// Reset usage limits on subscription renewal
+export async function handleSubscriptionWebhook(event: any) {
+  if (event.type === 'subscription.renewed') {
+    const { user_id } = event.data.subscription.metadata;
+    const subscriptionId = event.data.subscription.subscription_id;
+
+    // Reset monthly usage counters
+    const currentPeriod = getCurrentBillingPeriod();
+    
+    await db.usageTracker.upsert({
+      where: {
+        userId_subscriptionId_period: {
+          userId: user_id,
+          subscriptionId: subscriptionId,
+          period: currentPeriod,
+        }
+      },
+      update: {
+        exports_used: 0,
+        // Keep storage_used_gb (cumulative)
+      },
+      create: {
+        userId: user_id,
+        subscriptionId: subscriptionId,
+        period: currentPeriod,
+        exports_used: 0,
+        storage_used_gb: 0,
+      }
+    });
+  }
+}
+```
+
+```typescript plan-upgrades.ts
+// Upgrade subscription with proration
+export async function upgradeSubscription(
+  subscriptionId: string, 
+  newPlanId: string
+) {
+  const updatedSubscription = await dodo.subscriptions.changePlan(
+    subscriptionId,
+    {
+      product_id: newPlanId,
+      quantity: 1,
+      proration_billing_mode: 'prorated_immediately',
+    }
+  );
+
+  // Update user's limits immediately
+  const product = await dodo.products.retrieve(newPlanId);
+  const newLimits = product.metadata;
+  
+  await db.subscription.update({
+    where: { dodoSubscriptionId: subscriptionId },
+    data: { 
+      limits: newLimits,
+      planId: newPlanId,
+    }
+  });
+
+  return updatedSubscription;
+}
+```
+
+</CodeGroup>
+
+### Usage Limit UX Patterns
+
+**Progressive disclosure as limits approach:**
+
+```tsx
+function UsageMeter({ usage, limit }: { usage: number; limit: number }) {
+  const percentage = limit === -1 ? 0 : (usage / limit) * 100;
+  const variant = 
+    percentage >= 90 ? 'danger' :
+    percentage >= 75 ? 'warning' : 'success';
+
+  if (limit === -1) {
+    return <div className="text-sm text-gray-600">Unlimited exports</div>;
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between text-sm">
+        <span>Exports this month</span>
+        <span className="font-medium">{usage} / {limit}</span>
+      </div>
+      
+      <ProgressBar value={percentage} variant={variant} />
+      
+      {percentage >= 75 && (
+        <Alert variant={variant}>
+          You've used {Math.round(percentage)}% of your monthly exports.
+          {percentage >= 90 && (
+            <Button size="sm" onClick={handleUpgrade}>
+              Upgrade to Pro for unlimited exports
+            </Button>
+          )}
+        </Alert>
+      )}
+    </div>
+  );
+}
+```
+
+### Handling Over-Limit Requests
+
+<Tabs>
+  <Tab title="Soft Limit (Best for Conversion)">
+    **Allow generation, block export:**
+    
+    ```tsx
+    function ExportButton({ videoId }: { videoId: string }) {
+      const { allowed, reason } = await canExportVideo(userId);
+      
+      if (!allowed) {
+        return (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>Export Video</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogTitle>Export limit reached</DialogTitle>
+              <DialogDescription>
+                You've used all your exports this month.
+                Upgrade to Creator for 50 exports/month.
+              </DialogDescription>
+              <Button onClick={handleUpgrade}>
+                Upgrade Now
+              </Button>
+            </DialogContent>
+          </Dialog>
+        );
+      }
+      
+      return <Button onClick={() => exportVideo(videoId)}>Export Video</Button>;
+    }
+    ```
+    
+    **Why it works:**
+    - User invests time in project
+    - Sunk cost → high conversion (25-34%)
+    - Clear value proposition at paywall moment
+  </Tab>
+  
+  <Tab title="Hard Limit">
+    **Block generation at limit:**
+    
+    ```tsx
+    function CreateProjectButton() {
+      const { projectCount, limit } = useSubscriptionLimits();
+      const canCreate = limit === -1 || projectCount < limit;
+      
+      return (
+        <Button 
+          disabled={!canCreate}
+          onClick={createProject}
+        >
+          New Project
+          {!canCreate && (
+            <Tooltip>
+              Project limit reached ({projectCount}/{limit}).
+              Upgrade to Creator for 25 projects.
+            </Tooltip>
+          )}
+        </Button>
+      );
+    }
+    ```
+    
+    **Use when:**
+    - Storage/compute costs are very high
+    - Want to force upgrade decisions early
+    - Free tier users (prevent abuse)
+  </Tab>
+  
+  <Tab title="Overage Charges">
+    **Allow continuation with per-use pricing:**
+    
+    ```tsx
+    function ExportButton({ videoId }: { videoId: string }) {
+      const { exports_used, limit } = useUsage();
+      const isOverLimit = exports_used >= limit;
+      const overagePrice = 9_00; // $9 per export
+      
+      if (isOverLimit) {
+        return (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>Export Video</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogTitle>Additional Export</DialogTitle>
+              <DialogDescription>
+                You've reached your monthly limit. 
+                Export this video for ${overagePrice / 100}?
+              </DialogDescription>
+              <Button onClick={() => purchaseOverage(videoId)}>
+                Pay ${overagePrice / 100} to Export
+              </Button>
+            </DialogContent>
+          </Dialog>
+        );
+      }
+      
+      return <Button onClick={() => exportVideo(videoId)}>Export</Button>;
+    }
+    
+    async function purchaseOverage(videoId: string) {
+      // Create one-time payment for overage
+      const payment = await dodo.payments.create({
+        payment_link: true,
+        product_cart: [{
+          product_id: OVERAGE_PRODUCT_ID,
+          quantity: 1,
+        }],
+        metadata: {
+          user_id: userId,
+          type: 'overage_export',
+          video_id: videoId,
+        },
+      });
+      
+      window.location.href = payment.payment_link;
+    }
+    ```
+    
+    **Works for:**
+    - One-off needs without committing to upgrade
+    - Testing higher tiers before subscription
+    - Seasonal usage spikes
+  </Tab>
+</Tabs>
+
+---
+
+## 3. Freemium + Watermark Removal
+
+**Best for:** Editing tools (VEED.io, Kapwing, Clipchamp)  
+**Conversion rate:** 25-34% (highest of all models!)  
+**Example ARR:** $144-228 per user
+
+### How It Works
+
+The "try before you buy" model:
+- **Free tier:** Full features, but exports have watermark
+- **Upgrade trigger:** Remove watermark = instant payment
+- **Psychology:** User completes project → sunk cost → converts
+
+### Real-World Example: VEED.io
+
+**Pricing structure:**
+```
+Free:  $0/month → 720p exports with VEED.io watermark
+Basic: $12/month → 1080p, no watermark, 10GB storage
+Pro:   $24/month → 4K, unlimited AI tools, 100GB storage
+```
+
+**Conversion funnel:**
+1. User creates video (invested 30 mins)
+2. Clicks export → sees watermark preview
+3. "Remove watermark for $12/month" → **34% convert**
+
+**Why conversion is so high:**
+- User already invested time/effort
+- Clear before/after comparison
+- Single friction point at end of workflow
+
+### Implementation with Dodo Payments
+
+<CodeGroup>
+
+```typescript watermark-products.ts
+// Create watermark removal products
+export async function createWatermarkProducts() {
+  // Monthly subscription for watermark removal
+  const basicPlan = await dodo.products.create({
+    name: 'Basic Plan - Watermark Free',
+    price: {
+      type: 'recurring_price',
+      price: 12_00, // $12/month
+      currency: 'USD',
+      payment_frequency_count: 1,
+      payment_frequency_interval: 'Month',
+      subscription_period_count: 1,
+      subscription_period_interval: 'Month',
+      trial_period_days: 0, // No trial - instant value
+      discount: 0,
+      purchasing_power_parity: false,
+    },
+    tax_category: 'saas',
+    metadata: {
+      tier: 'basic',
+      max_quality: '1080p',
+      watermark_free: true,
+      storage_gb: 10,
+    },
+  });
+
+  // One-time watermark removal (single video)
+  const oneTimeRemoval = await dodo.products.create({
+    name: 'Remove Watermark (One Video)',
+    price: {
+      type: 'one_time_price',
+      price: 5_00, // $5 per video
+      currency: 'USD',
+      discount: 0,
+      purchasing_power_parity: false,
+    },
+    tax_category: 'digital_products',
+    metadata: {
+      type: 'watermark_removal',
+      valid_for_videos: 1,
+    },
+  });
+
+  return { basicPlan, oneTimeRemoval };
+}
+```
+
+```typescript export-flow.ts
+// Export button with watermark upsell
+export async function handleExport(
+  userId: string, 
+  videoId: string
+) {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    include: { subscription: true }
+  });
+
+  // Check if user has watermark-free access
+  const hasWatermarkFree = 
+    user.subscription?.metadata?.watermark_free === true;
+
+  if (hasWatermarkFree) {
+    // Direct export without watermark
+    return await exportVideo(videoId, { watermark: false });
+  }
+
+  // Free user - offer watermark removal options
+  return {
+    needsUpgrade: true,
+    options: [
+      {
+        type: 'subscription',
+        name: 'Basic Plan',
+        price: '$12/month',
+        description: 'Unlimited watermark-free exports',
+        cta: 'Start Monthly Plan',
+        recommended: true,
+      },
+      {
+        type: 'one_time',
+        name: 'This Video Only',
+        price: '$5',
+        description: 'Remove watermark from this video',
+        cta: 'Pay $5',
+      },
+      {
+        type: 'free',
+        name: 'Export with Watermark',
+        price: 'Free',
+        description: '720p with VEED.io watermark',
+        cta: 'Download',
+      }
+    ]
+  };
+}
+```
+
+```tsx export-dialog.tsx
+'use client';
+
+import { useState } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+
+function ExportDialog({ videoId, preview }: Props) {
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const hasWatermarkFree = user?.subscription?.watermark_free;
+
+  if (hasWatermarkFree) {
+    return (
+      <Button onClick={() => exportVideo(videoId)}>
+        Export Video (HD, No Watermark)
+      </Button>
+    );
+  }
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button size="lg" className="w-full">
+          Export Video
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent className="max-w-2xl">
+        <DialogTitle>Export Your Video</DialogTitle>
+        
+        {/* Before/After Preview */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="aspect-video relative rounded-lg overflow-hidden">
+              <Image src={preview} fill className="object-cover" />
+              {/* Watermark overlay */}
+              <div className="absolute bottom-4 right-4 bg-white/90 px-3 py-1 rounded">
+                <span className="text-xs font-semibold">YOURAPP.IO</span>
+              </div>
+            </div>
+            <p className="text-sm text-center text-gray-600">
+              Free (with watermark)
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="aspect-video relative rounded-lg overflow-hidden border-2 border-blue-500">
+              <Image src={preview} fill className="object-cover" />
+              {/* No watermark */}
+            </div>
+            <p className="text-sm text-center font-medium text-blue-600">
+              Professional (watermark-free) ✨
+            </p>
+          </div>
+        </div>
+
+        {/* Pricing Options */}
+        <div className="space-y-3 mt-4">
+          {/* Recommended: Monthly subscription */}
+          <Card className="border-2 border-blue-500 relative">
+            <div className="absolute -top-3 left-4 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+              Recommended
+            </div>
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h4 className="font-semibold">Basic Plan</h4>
+                  <p className="text-sm text-gray-600">
+                    Unlimited HD exports, no watermark
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold">$12</p>
+                  <p className="text-xs text-gray-500">/month</p>
+                </div>
+              </div>
+              <Button 
+                className="w-full mt-3" 
+                onClick={() => subscribeMonthly()}
+                loading={loading}
+              >
+                Start Basic Plan
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* One-time removal */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h4 className="font-semibold">This Video Only</h4>
+                  <p className="text-sm text-gray-600">
+                    One-time watermark removal
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold">$5</p>
+                </div>
+              </div>
+              <Button 
+                variant="outline"
+                className="w-full mt-3"
+                onClick={() => purchaseOneTime()}
+              >
+                Pay $5
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Free export */}
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => exportWithWatermark()}
+          >
+            Export with Watermark (Free)
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  async function subscribeMonthly() {
+    setLoading(true);
+    const response = await fetch('/api/dodo-subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        planId: 'basic_plan_id',
+        userId: user.id,
+      }),
+    });
+    
+    const { payment_link } = await response.json();
+    window.location.href = payment_link;
+  }
+
+  async function purchaseOneTime() {
+    setLoading(true);
+    const response = await fetch('/api/dodo-payment', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        productId: 'watermark_removal_id',
+        videoId: videoId,
+      }),
+    });
+    
+    const { payment_link } = await response.json();
+    window.location.href = payment_link;
+  }
+
+  async function exportWithWatermark() {
+    await exportVideo(videoId, { watermark: true });
+  }
+}
+```
+
+```typescript webhooks-watermark.ts
+// Handle successful payments
+export async function handleWatermarkPayment(event: any) {
+  if (event.type === 'payment.succeeded') {
+    const { user_id, video_id, type } = event.data.payment.metadata;
+
+    if (type === 'watermark_removal') {
+      // One-time removal - mark specific video
+      await db.video.update({
+        where: { id: video_id },
+        data: { 
+          watermarkFree: true,
+          purchaseId: event.data.payment.payment_id,
+        }
+      });
+
+      // Export video without watermark
+      await exportVideo(video_id, { watermark: false });
+    }
+  }
+
+  if (event.type === 'subscription.active') {
+    const { user_id } = event.data.subscription.metadata;
+
+    // Grant watermark-free access to all videos
+    await db.user.update({
+      where: { id: user_id },
+      data: {
+        watermarkFree: true,
+        subscriptionId: event.data.subscription.subscription_id,
+      }
+    });
+  }
+}
+```
+
+</CodeGroup>
+
+### Conversion Optimization
+
+**Maximize conversion at the critical moment:**
+
+```tsx
+// Email immediately after free export
+function sendWatermarkEmail(user: User, video: Video) {
+  return {
+    subject: "Your video is ready! (Remove watermark?)",
+    body: `
+      Hi ${user.name},
+
+      Your video is ready to download! 🎉
+      
+      [Download with watermark (free)]
+      
+      Want it without the watermark?
+      Upgrade to Basic ($12/month) for:
+      ✨ Unlimited watermark-free exports
+      🎬 HD quality (1080p)
+      💾 10GB storage
+      
+      [Remove Watermark for $12/month]
+      
+      Or remove the watermark from just this video for $5:
+      [One-time removal ($5)]
+    `
+  };
+}
+```
+
+### Best Practices
+
+<AccordionGroup>
+  <Accordion title="Show watermark position clearly BEFORE export">
+    Let users see exactly where the watermark appears:
+    
+    ```tsx
+    <VideoPreview>
+      <WatermarkOverlay position="bottom-right" size="medium" />
+      <p className="text-xs">Preview of watermark position</p>
+    </VideoPreview>
+    ```
+    
+    **Why:** Transparent preview → less frustration → higher conversion
+  </Accordion>
+
+  <Accordion title="Offer both subscription AND one-time options">
+    **Data from VEED.io:**
+    - 60% choose subscription ($12/mo)
+    - 40% choose one-time ($5)
+    - Total conversion: 34%
+    
+    **Insight:** Some users only need one video. Don't lose them!
+  </Accordion>
+
+  <Accordion title="Make the watermark non-intrusive but visible">
+    ```tsx
+    const WatermarkConfig = {
+      opacity: 0.7,        // Visible but not jarring
+      size: 'small',       // Corner placement
+      position: 'bottom-right',
+      text: 'YOURAPP.IO',  // Brand name only
+    };
+    ```
+    
+    **Balance:**
+    - Too intrusive → users abandon
+    - Too subtle → no incentive to upgrade
+  </Accordion>
+
+  <Accordion title="Allow full editing on free tier">
+    VEED.io's winning strategy:
+    - Free users get ALL features during editing
+    - Paywall only at export
+    
+    **Result:**
+    - High engagement (users invest time)
+    - Low churn (no fake limitations)
+    - Better conversion (sunk cost effect)
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+**Why this model converts best:** 
+
+Users complete their project → see the final result → only THEN encounter the paywall. At this moment, they've already invested 20-60 minutes. The $12/month feels like a small price to protect that investment.
+
+This is the "Ikea Effect" in action: people value things they've built themselves.
+</Info>
+
+---
+
+## 4. Pay-Per-Use Metered Billing
+
+**Best for:** API-first tools, enterprise integrations  
+**Conversion rate:** 15-20% (among API users)  
+**Example ARR:** $500-2,000 per customer
+
+### How It Works
+
+True consumption-based pricing:
+- **Charge per second** of video generated
+- **Charge per API call** for processing
+- **Charge per GB** of storage used
+- **No upfront commitment** required
+
+### Real-World Example: AssemblyAI (Audio → Video pattern)
+
+**Pricing structure:**
+```
+Pay-as-you-go:
+- $0.50 per hour of audio transcribed
+- $0.10 per 1000 words for LLM summaries
+- Billed monthly for usage
+```
+
+**For Video Generation:**
+```
+Hypothetical metered pricing:
+- $0.05 per second (480p)
+- $0.10 per second (1080p)
+- $0.25 per second (4K)
+- $0.02 per API call overhead
+```
+
+### Implementation with Dodo Payments
+
+<CodeGroup>
+
+```typescript usage-based-product.ts
+// Create usage-based pricing product
+export async function createUsageBasedProduct() {
+  // Note: Dodo Payments supports usage-based pricing!
+  const usageProduct = await dodo.products.create({
+    name: 'Video Generation API',
+    price: {
+      type: 'usage_based_price',
+      currency: 'USD',
+      fixed_price: 0, // No base fee
+      payment_frequency_count: 1,
+      payment_frequency_interval: 'Month',
+      subscription_period_count: 1,
+      subscription_period_interval: 'Month',
+      discount: 0,
+      purchasing_power_parity: false,
+      meters: [
+        {
+          meter_id: 'video_seconds_meter',
+          price_per_unit: '0.05', // $0.05 per second
+          free_threshold: 0,
+        }
+      ],
+    },
+    tax_category: 'saas',
+    metadata: {
+      billing_type: 'metered',
+      unit: 'seconds',
+    },
+  });
+
+  return usageProduct;
+}
+
+// Create the meter for tracking usage
+export async function createUsageMeter() {
+  const meter = await dodo.meters.create({
+    name: 'Video Seconds Generated',
+    event_name: 'video_generated',
+    measurement_unit: 'seconds',
+    aggregation: {
+      type: 'sum',
+      key: 'duration_seconds', // Sum the duration_seconds from events
+    },
+  });
+
+  return meter;
+}
+```
+
+```typescript track-usage.ts
+// Track video generation usage
+export async function trackVideoGeneration(
+  customerId: string,
+  videoId: string,
+  durationSeconds: number,
+  quality: string
+) {
+  // Calculate the price multiplier based on quality
+  const qualityMultipliers = {
+    '480p': 1.0,
+    '1080p': 2.0,
+    '4K': 5.0,
+  };
+
+  const multiplier = qualityMultipliers[quality] || 1.0;
+  const effectiveSeconds = durationSeconds * multiplier;
+
+  // Send usage event to Dodo
+  await dodo.usageEvents.ingest({
+    events: [
+      {
+        event_id: `video_${videoId}_${Date.now()}`, // Unique event ID
+        customer_id: customerId,
+        event_name: 'video_generated',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          video_id: videoId,
+          duration_seconds: effectiveSeconds,
+          quality: quality,
+          actual_duration: durationSeconds,
+        },
+      }
+    ]
+  });
+
+  // Also track in your DB for usage dashboards
+  await db.usageEvent.create({
+    data: {
+      customerId,
+      videoId,
+      eventType: 'video_generation',
+      durationSeconds: effectiveSeconds,
+      quality,
+      timestamp: new Date(),
+    }
+  });
+}
+```
+
+```typescript usage-subscription.ts
+// Create usage-based subscription
+export async function createUsageSubscription(
+  userId: string,
+  productId: string
+) {
+  const user = await db.user.findUnique({ 
+    where: { id: userId } 
+  });
+
+  const subscription = await dodo.subscriptions.create({
+    payment_link: true,
+    product_id: productId,
+    quantity: 1,
+    customer: {
+      email: user.email,
+      name: user.name,
+    },
+    billing: {
+      country: user.country || 'US',
+    },
+    metadata: {
+      user_id: userId,
+      billing_type: 'usage_based',
+    },
+    return_url: `${process.env.APP_URL}/dashboard?subscription=active`,
+  });
+
+  return subscription.payment_link;
+}
+```
+
+```tsx usage-dashboard.tsx
+'use client';
+
+// Display current usage and projected costs
+export function UsageDashboard({ customerId }: Props) {
+  const { data: usage } = useQuery({
+    queryKey: ['usage', customerId],
+    queryFn: () => fetchMonthlyUsage(customerId),
+  });
+
+  if (!usage) return <Skeleton />;
+
+  const secondsUsed = usage.total_seconds;
+  const estimatedCost = secondsUsed * 0.05; // $0.05 per second
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Usage This Month</CardTitle>
+        <CardDescription>
+          Billing period: {formatDate(usage.period_start)} - {formatDate(usage.period_end)}
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {/* Total usage */}
+        <div className="grid grid-cols-2 gap-4">
+          <Metric
+            label="Video Seconds"
+            value={secondsUsed.toLocaleString()}
+            unit="seconds"
+          />
+          <Metric
+            label="Estimated Cost"
+            value={`$${estimatedCost.toFixed(2)}`}
+            trend="up"
+          />
+        </div>
+
+        {/* Usage breakdown by quality */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">Breakdown by Quality</h4>
+          {Object.entries(usage.by_quality).map(([quality, seconds]) => (
+            <div key={quality} className="flex justify-between text-sm">
+              <span className="text-gray-600">{quality}</span>
+              <span className="font-medium">
+                {seconds} seconds (${(seconds * getPricePerSecond(quality)).toFixed(2)})
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Daily usage chart */}
+        <div>
+          <h4 className="text-sm font-medium mb-2">Daily Usage</h4>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={usage.daily}>
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="seconds" fill="#3b82f6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Cost alerts */}
+        {estimatedCost > 100 && (
+          <Alert variant="warning">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>High usage detected</AlertTitle>
+            <AlertDescription>
+              Your estimated bill this month is ${estimatedCost.toFixed(2)}.
+              Consider our Enterprise plan for volume discounts.
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function getPricePerSecond(quality: string): number {
+  const prices = {
+    '480p': 0.05,
+    '1080p': 0.10,
+    '4K': 0.25,
+  };
+  return prices[quality] || 0.05;
+}
+```
+
+```typescript billing.ts
+// Monthly billing webhook
+export async function handleUsageBilling(event: any) {
+  if (event.type === 'subscription.renewed') {
+    const { user_id } = event.data.subscription.metadata;
+    const subscriptionId = event.data.subscription.subscription_id;
+
+    // Get usage for the billing period
+    const usage = await dodo.subscriptions.retrieveUsageHistory(
+      subscriptionId,
+      {
+        start_date: event.data.billing_period_start,
+        end_date: event.data.billing_period_end,
+      }
+    );
+
+    // Dodo automatically calculates the charge based on meters
+    // But you can also send a summary email to the user
+    const totalCost = usage.items.reduce((sum, item) => {
+      return sum + (item.total_price / 100);
+    }, 0);
+
+    await sendBillingEmail(user_id, {
+      usage: usage.items,
+      total: totalCost,
+      period: {
+        start: event.data.billing_period_start,
+        end: event.data.billing_period_end,
+      }
+    });
+  }
+}
+```
+
+</CodeGroup>
+
+### Best Practices
+
+<AccordionGroup>
+  <Accordion title="Provide real-time usage visibility">
+    Show current usage BEFORE the bill arrives:
+    
+    - Dashboard with daily/weekly breakdown
+    - Cost estimator before running expensive jobs
+    - Alerts when approaching thresholds
+    
+    **Why:** Prevents bill shock, increases trust
+  </Accordion>
+
+  <Accordion title="Offer usage-based + minimum commit hybrid">
+    ```typescript
+    // $50/month minimum + $0.05/second usage
+    const hybridProduct = {
+      base_fee: 50_00,
+      usage_rate: 0.05,
+      included_seconds: 1000, // First 1000 seconds free
+    };
+    ```
+    
+    **Benefits:**
+    - Predictable base revenue
+    - Scales with customer success
+    - Protects against very low usage
+  </Accordion>
+
+  <Accordion title="Set up budget alerts and caps">
+    ```typescript
+    // Allow customers to set spending limits
+    await db.usageLimit.create({
+      data: {
+        customerId: user.id,
+        monthly_cap_cents: 100_00, // $100/month max
+        alert_threshold_cents: 75_00, // Alert at $75
+      }
+    });
+    
+    // Check before processing expensive requests
+    async function canGenerateVideo(customerId: string, estimatedCost: number) {
+      const usage = await getCurrentMonthUsage(customerId);
+      const limit = await db.usageLimit.findUnique({
+        where: { customerId }
+      });
+      
+      if (limit && usage.total_cents + estimatedCost > limit.monthly_cap_cents) {
+        return {
+          allowed: false,
+          reason: 'Monthly spending cap reached'
+        };
+      }
+      
+      return { allowed: true };
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Provide granular usage data">
+    Let customers see exactly what they're paying for:
+    
+    ```tsx
+    <UsageTable>
+      <Row>
+        <td>2024-01-15 14:32</td>
+        <td>Video Generation</td>
+        <td>10s @ 1080p</td>
+        <td>20 compute units</td>
+        <td>$1.00</td>
+      </Row>
+      // ... more rows
+    </UsageTable>
+    ```
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+**Common pitfall:** Customers hate surprise bills.
+
+Always provide:
+1. Real-time usage dashboard
+2. Cost estimates BEFORE expensive operations
+3. Spending alerts and caps
+4. Detailed usage breakdowns
+</Warning>
+
+---
+
+## 5. Hybrid: Subscription + Usage
+
+**Best for:** B2B SaaS, API platforms (Vercel, AWS, Anthropic)  
+**Conversion rate:** 10-18%  
+**Example ARR:** $600-3,000 per customer
+
+### How It Works
+
+Combine predictable base fees with usage-based pricing:
+- **Base subscription:** $99/month for platform access
+- **Included quota:** First 1,000 API calls free
+- **Overages:** $0.01 per additional API call
+- **Volume tiers:** Better rates at higher usage
+
+### Real-World Example: Anthropic Claude API
+
+**Pricing structure:**
+```
+Pro Plan: $20/month
+- Includes $5 of API credits
+- Standard API pricing after that
+
+Team Plan: $30/user/month  
+- Includes $10 of API credits per user
+- Discounted API pricing
+
+Enterprise: Custom
+- Volume pricing
+- Dedicated capacity
+- Custom terms
+```
+
+### Implementation with Dodo Payments
+
+<CodeGroup>
+
+```typescript hybrid-products.ts
+// Create hybrid subscription + usage products
+export async function createHybridProducts() {
+  // Starter tier: Small base + usage
+  const starter = await dodo.products.create({
+    name: 'Starter Plan',
+    price: {
+      type: 'usage_based_price',
+      currency: 'USD',
+      fixed_price: 29_00, // $29/month base
+      payment_frequency_count: 1,
+      payment_frequency_interval: 'Month',
+      subscription_period_count: 1,
+      subscription_period_interval: 'Month',
+      discount: 0,
+      purchasing_power_parity: false,
+      meters: [
+        {
+          meter_id: 'api_calls_meter',
+          price_per_unit: '0.01', // $0.01 per API call
+          free_threshold: 1000, // First 1,000 calls free
+        }
+      ],
+    },
+    tax_category: 'saas',
+    metadata: {
+      tier: 'starter',
+      included_calls: 1000,
+      price_per_call_cents: 1,
+    },
+  });
+
+  // Pro tier: Higher base + better rates
+  const pro = await dodo.products.create({
+    name: 'Pro Plan',
+    price: {
+      type: 'usage_based_price',
+      currency: 'USD',
+      fixed_price: 99_00, // $99/month base
+      payment_frequency_count: 1,
+      payment_frequency_interval: 'Month',
+      subscription_period_count: 1,
+      subscription_period_interval: 'Month',
+      discount: 0,
+      purchasing_power_parity: false,
+      meters: [
+        {
+          meter_id: 'api_calls_meter',
+          price_per_unit: '0.007', // $0.007 per call (30% discount)
+          free_threshold: 5000, // First 5,000 calls free
+        }
+      ],
+    },
+    tax_category: 'saas',
+    metadata: {
+      tier: 'pro',
+      included_calls: 5000,
+      price_per_call_cents: 0.7,
+    },
+  });
+
+  // Enterprise tier: Flat fee + negotiated rates
+  const enterprise = await dodo.products.create({
+    name: 'Enterprise Plan',
+    price: {
+      type: 'usage_based_price',
+      currency: 'USD',
+      fixed_price: 499_00, // $499/month base
+      payment_frequency_count: 1,
+      payment_frequency_interval: 'Month',
+      subscription_period_count: 1,
+      subscription_period_interval: 'Month',
+      discount: 0,
+      purchasing_power_parity: false,
+      meters: [
+        {
+          meter_id: 'api_calls_meter',
+          price_per_unit: '0.005', // $0.005 per call (50% discount)
+          free_threshold: 20000, // First 20,000 calls free
+        }
+      ],
+    },
+    tax_category: 'saas',
+    metadata: {
+      tier: 'enterprise',
+      included_calls: 20000,
+      price_per_call_cents: 0.5,
+      features: ['priority_support', 'sla', 'custom_integrations'],
+    },
+  });
+
+  return { starter, pro, enterprise };
+}
+```
+
+```typescript track-api-usage.ts
+// Track API calls for hybrid billing
+export async function trackAPICall(
+  customerId: string,
+  apiCallId: string,
+  metadata: {
+    endpoint: string;
+    duration_ms: number;
+    tokens_used?: number;
+  }
+) {
+  // Send to Dodo for billing
+  await dodo.usageEvents.ingest({
+    events: [
+      {
+        event_id: apiCallId,
+        customer_id: customerId,
+        event_name: 'api_call',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          endpoint: metadata.endpoint,
+          duration_ms: metadata.duration_ms,
+          tokens_used: metadata.tokens_used,
+          // The meter will sum based on count of events
+          count: 1,
+        },
+      }
+    ]
+  });
+
+  // Also track in your DB for dashboards
+  await db.apiCallLog.create({
+    data: {
+      id: apiCallId,
+      customerId,
+      endpoint: metadata.endpoint,
+      durationMs: metadata.duration_ms,
+      tokensUsed: metadata.tokens_used,
+      timestamp: new Date(),
+    }
+  });
+}
+```
+
+```tsx hybrid-pricing-display.tsx
+'use client';
+
+// Display hybrid pricing tiers
+export function HybridPricingTable() {
+  return (
+    <div className="grid md:grid-cols-3 gap-6">
+      {/* Starter */}
+      <PricingCard
+        name="Starter"
+        price="$29"
+        period="/month"
+        description="For small projects and testing"
+        features={[
+          '1,000 API calls included',
+          '$0.01 per additional call',
+          'Standard support',
+          'Community access',
+        ]}
+        cta="Start Free Trial"
+      />
+
+      {/* Pro */}
+      <PricingCard
+        name="Pro"
+        price="$99"
+        period="/month"
+        description="For growing businesses"
+        badge="Most Popular"
+        features={[
+          '5,000 API calls included',
+          '$0.007 per additional call (30% off)',
+          'Priority support',
+          'Advanced analytics',
+          'Custom webhooks',
+        ]}
+        cta="Start Free Trial"
+        highlighted
+      />
+
+      {/* Enterprise */}
+      <PricingCard
+        name="Enterprise"
+        price="$499"
+        period="/month"
+        description="For large-scale operations"
+        features={[
+          '20,000 API calls included',
+          '$0.005 per additional call (50% off)',
+          'Dedicated support',
+          '99.9% SLA',
+          'Custom integrations',
+          'Volume discounts available',
+        ]}
+        cta="Contact Sales"
+      />
+    </div>
+  );
+}
+```
+
+```tsx usage-projection.tsx
+// Show users their projected bill
+export function UsageProjection({ customerId }: Props) {
+  const { data: usage } = useQuery({
+    queryKey: ['usage-projection', customerId],
+    queryFn: () => fetchUsageProjection(customerId),
+  });
+
+  if (!usage) return <Skeleton />;
+
+  const {
+    current_period_calls,
+    included_calls,
+    overage_calls,
+    base_fee,
+    overage_fee,
+    projected_total,
+  } = usage;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Current Usage & Projected Bill</CardTitle>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {/* Usage meter */}
+        <div>
+          <div className="flex justify-between text-sm mb-2">
+            <span>API Calls This Month</span>
+            <span className="font-medium">
+              {current_period_calls.toLocaleString()} / {included_calls.toLocaleString()} included
+            </span>
+          </div>
+          
+          <ProgressBar 
+            value={(current_period_calls / included_calls) * 100}
+            variant={current_period_calls > included_calls ? 'warning' : 'success'}
+          />
+        </div>
+
+        {/* Bill breakdown */}
+        <div className="space-y-2 pt-4 border-t">
+          <div className="flex justify-between text-sm">
+            <span>Base subscription</span>
+            <span>${(base_fee / 100).toFixed(2)}</span>
+          </div>
+          
+          {overage_calls > 0 && (
+            <div className="flex justify-between text-sm">
+              <span>Overage ({overage_calls.toLocaleString()} calls @ $0.01)</span>
+              <span>${(overage_fee / 100).toFixed(2)}</span>
+            </div>
+          )}
+          
+          <div className="flex justify-between font-semibold text-lg pt-2 border-t">
+            <span>Projected Total</span>
+            <span>${(projected_total / 100).toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Upgrade recommendation */}
+        {overage_fee > 30_00 && (
+          <Alert>
+            <TrendingUp className="h-4 w-4" />
+            <AlertTitle>Upgrade Recommended</AlertTitle>
+            <AlertDescription>
+              You'd save ${((overage_fee - 70_00) / 100).toFixed(2)}/month by upgrading to Pro.
+              <Button size="sm" className="mt-2" onClick={handleUpgrade}>
+                View Pro Plan
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+</CodeGroup>
+
+### Volume-Based Tier Recommendations
+
+**Auto-suggest upgrades based on usage patterns:**
+
+```typescript
+async function analyzeUsageAndRecommend(customerId: string) {
+  const usage = await getMonthlyUsage(customerId);
+  const currentPlan = await getCurrentPlan(customerId);
+
+  // Calculate costs on current vs. alternative plans
+  const costs = {
+    starter: 29_00 + Math.max(0, usage.api_calls - 1000) * 1,
+    pro: 99_00 + Math.max(0, usage.api_calls - 5000) * 0.7,
+    enterprise: 499_00 + Math.max(0, usage.api_calls - 20000) * 0.5,
+  };
+
+  // Find cheapest plan
+  const cheapest = Object.entries(costs).reduce((min, [plan, cost]) => 
+    cost < min.cost ? { plan, cost } : min,
+    { plan: 'starter', cost: Infinity }
+  );
+
+  // Recommend upgrade if savings > $20/month
+  if (cheapest.plan !== currentPlan.tier && 
+      costs[currentPlan.tier] - cheapest.cost > 20_00) {
+    return {
+      shouldRecommend: true,
+      currentCost: costs[currentPlan.tier],
+      recommendedPlan: cheapest.plan,
+      newCost: cheapest.cost,
+      monthlySavings: costs[currentPlan.tier] - cheapest.cost,
+    };
+  }
+
+  return { shouldRecommend: false };
+}
+```
+
+### Best Practices
+
+<AccordionGroup>
+  <Accordion title="Make base fee meaningful">
+    Don't just charge $10/month and then meter everything:
+    
+    ```typescript
+    // ❌ Bad: Feels like a "gotcha"
+    {
+      base: 10_00,
+      included: 100, // Only 100 API calls?
+      overage: 0.10, // 10 cents per call!
+    }
+
+    // ✅ Good: Fair included quota
+    {
+      base: 29_00,
+      included: 1000, // Enough for real usage
+      overage: 0.01, // Reasonable overage rate
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Offer volume discounts in higher tiers">
+    Reward heavy users with better per-unit economics:
+    
+    | Tier | Base | Included | Overage Rate | Effective Rate @ 10K calls |
+    |------|------|----------|--------------|---------------------------|
+    | Starter | $29 | 1,000 | $0.01 | $119/mo |
+    | Pro | $99 | 5,000 | $0.007 | $134/mo (better) |
+    | Enterprise | $499 | 20,000 | $0.005 | $499/mo (best!) |
+  </Accordion>
+
+  <Accordion title="Show projected costs BEFORE committing">
+    Let customers test different tiers:
+    
+    ```tsx
+    <PricingCalculator>
+      <Input 
+        label="Expected monthly API calls"
+        value={estimatedCalls}
+        onChange={setEstimatedCalls}
+      />
+      
+      <Comparison>
+        <PlanCard tier="starter" cost={calculateCost('starter', estimatedCalls)} />
+        <PlanCard tier="pro" cost={calculateCost('pro', estimatedCalls)} />
+        <PlanCard tier="enterprise" cost={calculateCost('enterprise', estimatedCalls)} />
+      </Comparison>
+    </PricingCalculator>
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## 6. Enterprise Credit Pooling
+
+**Best for:** Team/multi-user AI tools  
+**Conversion rate:** 5-10% (of total users), but **40-60% ACV**  
+**Example ARR:** $2,000-15,000 per account
+
+### How It Works
+
+Large prepaid credit pools shared across team members:
+- **Prepurchase credits:** $5,000 upfront for 100,000 credits
+- **Team pooling:** All team members draw from shared pool
+- **Admin controls:** Budget allocation, usage monitoring
+- **Volume pricing:** Better rates at enterprise scale
+
+### Real-World Example: Runway Teams
+
+**Pricing structure:**
+```
+Individual: $35/month → 2,250 credits
+Teams: Custom → Pooled credits + admin controls
+
+Example Enterprise Deal:
+- $10,000 prepaid
+- 250,000 credits (25% volume bonus)
+- Shared across 20 team members
+- Admin dashboard + usage analytics
+```
+
+### Implementation with Dodo Payments
+
+<CodeGroup>
+
+```typescript enterprise-products.ts
+// Create enterprise credit packages
+export async function createEnterpriseCreditPackages() {
+  const packages = [
+    {
+      name: 'Enterprise 50K Pack',
+      price: 2000_00, // $2,000
+      base_credits: 50000,
+      bonus_percentage: 10, // 10% bonus
+    },
+    {
+      name: 'Enterprise 100K Pack',
+      price: 4000_00, // $4,000
+      base_credits: 100000,
+      bonus_percentage: 15, // 15% bonus
+    },
+    {
+      name: 'Enterprise 250K Pack',
+      price: 10000_00, // $10,000
+      base_credits: 250000,
+      bonus_percentage: 25, // 25% bonus
+    },
+  ];
+
+  for (const pkg of packages) {
+    const total_credits = Math.floor(
+      pkg.base_credits * (1 + pkg.bonus_percentage / 100)
+    );
+
+    await dodo.products.create({
+      name: pkg.name,
+      price: {
+        type: 'one_time_price',
+        price: pkg.price,
+        currency: 'USD',
+        discount: 0,
+        purchasing_power_parity: false,
+      },
+      tax_category: 'digital_products',
+      metadata: {
+        base_credits: pkg.base_credits,
+        bonus_credits: total_credits - pkg.base_credits,
+        total_credits: total_credits,
+        package_type: 'enterprise_pool',
+      },
+    });
+  }
+}
+```
+
+```typescript team-credit-pool.ts
+// Team credit pool management
+interface TeamCreditPool {
+  id: string;
+  teamId: string;
+  total_credits: number;
+  used_credits: number;
+  remaining_credits: number;
+  allocated_to_members: Record<string, number>; // memberId -> allocated amount
+  created_at: Date;
+  expires_at: Date | null;
+}
+
+export async function purchaseTeamCredits(
+  teamId: string,
+  productId: string,
+  purchasedBy: string
+) {
+  const team = await db.team.findUnique({ 
+    where: { id: teamId },
+    include: { owner: true }
+  });
+
+  // Create payment for team
+  const payment = await dodo.payments.create({
+    payment_link: true,
+    product_cart: [
+      { product_id: productId, quantity: 1 }
+    ],
+    customer: {
+      email: team.owner.email,
+      name: team.name,
+    },
+    metadata: {
+      team_id: teamId,
+      purchased_by: purchasedBy,
+      type: 'team_credit_pool',
+    },
+    return_url: `${process.env.APP_URL}/team/${teamId}/billing?purchase=success`,
+  });
+
+  return payment.payment_link;
+}
+
+// Webhook: Add credits to team pool
+export async function handleTeamCreditPurchase(event: any) {
+  if (event.type === 'payment.succeeded') {
+    const { team_id } = event.data.payment.metadata;
+    const { total_credits } = event.data.payment.line_items[0].metadata;
+
+    await db.teamCreditPool.create({
+      data: {
+        teamId: team_id,
+        total_credits: total_credits,
+        used_credits: 0,
+        remaining_credits: total_credits,
+        allocated_to_members: {},
+        paymentId: event.data.payment.payment_id,
+      }
+    });
+
+    // Notify team admins
+    await notifyTeamAdmins(team_id, {
+      type: 'credits_added',
+      amount: total_credits,
+    });
+  }
+}
+```
+
+```typescript member-allocation.ts
+// Allocate credits to team members
+export async function allocateCreditsToMember(
+  teamId: string,
+  memberId: string,
+  credits: number,
+  allocatedBy: string
+) {
+  const pool = await db.teamCreditPool.findFirst({
+    where: {
+      teamId: teamId,
+      remaining_credits: { gte: credits }
+    },
+    orderBy: { created_at: 'desc' }
+  });
+
+  if (!pool) {
+    throw new Error('Insufficient team credits');
+  }
+
+  // Update pool allocation
+  await db.teamCreditPool.update({
+    where: { id: pool.id },
+    data: {
+      allocated_to_members: {
+        ...pool.allocated_to_members,
+        [memberId]: (pool.allocated_to_members[memberId] || 0) + credits,
+      }
+    }
+  });
+
+  // Add credits to member's account
+  await db.user.update({
+    where: { id: memberId },
+    data: {
+      credits: { increment: credits },
+      allocated_from_team: true,
+    }
+  });
+
+  // Log allocation
+  await db.creditAllocation.create({
+    data: {
+      teamId,
+      memberId,
+      amount: credits,
+      allocatedBy,
+      poolId: pool.id,
+    }
+  });
+}
+```
+
+```typescript team-usage-tracking.ts
+// Track team-wide usage
+export async function deductFromTeamPool(
+  userId: string,
+  creditCost: number
+) {
+  const user = await db.user.findUnique({ 
+    where: { id: userId },
+    include: { team: true }
+  });
+
+  if (!user.team) {
+    // Individual user - deduct from personal credits
+    return deductPersonalCredits(userId, creditCost);
+  }
+
+  // Team member - deduct from team pool
+  const pool = await db.teamCreditPool.findFirst({
+    where: {
+      teamId: user.team.id,
+      remaining_credits: { gte: creditCost }
+    },
+    orderBy: { created_at: 'desc' }
+  });
+
+  if (!pool) {
+    throw new Error('Team has insufficient credits');
+  }
+
+  // Deduct from pool atomically
+  await db.$transaction([
+    db.teamCreditPool.update({
+      where: { id: pool.id },
+      data: {
+        used_credits: { increment: creditCost },
+        remaining_credits: { decrement: creditCost },
+      }
+    }),
+    
+    db.teamCreditUsage.create({
+      data: {
+        poolId: pool.id,
+        userId: userId,
+        teamId: user.team.id,
+        amount: creditCost,
+        timestamp: new Date(),
+      }
+    })
+  ]);
+}
+```
+
+```tsx team-admin-dashboard.tsx
+'use client';
+
+// Team admin dashboard
+export function TeamCreditDashboard({ teamId }: Props) {
+  const { data: pool } = useQuery({
+    queryKey: ['team-credits', teamId],
+    queryFn: () => fetchTeamCreditPool(teamId),
+  });
+
+  const { data: usage } = useQuery({
+    queryKey: ['team-usage', teamId],
+    queryFn: () => fetchTeamUsage(teamId),
+  });
+
+  if (!pool || !usage) return <Skeleton />;
+
+  const utilizationRate = (pool.used_credits / pool.total_credits) * 100;
+
+  return (
+    <div className="space-y-6">
+      {/* Pool Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Team Credit Pool</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-3 gap-4">
+            <Metric
+              label="Total Credits"
+              value={pool.total_credits.toLocaleString()}
+            />
+            <Metric
+              label="Used"
+              value={pool.used_credits.toLocaleString()}
+              percentage={(pool.used_credits / pool.total_credits) * 100}
+            />
+            <Metric
+              label="Remaining"
+              value={pool.remaining_credits.toLocaleString()}
+              trend={utilizationRate > 80 ? 'down' : 'stable'}
+            />
+          </div>
+
+          <ProgressBar 
+            value={utilizationRate}
+            variant={utilizationRate > 90 ? 'danger' : utilizationRate > 75 ? 'warning' : 'success'}
+          />
+
+          {utilizationRate > 80 && (
+            <Alert variant="warning">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Low credit balance</AlertTitle>
+              <AlertDescription>
+                Your team is running low on credits ({pool.remaining_credits.toLocaleString()} remaining).
+                <Button size="sm" onClick={handlePurchaseMore}>
+                  Purchase More Credits
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Usage by Member */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Usage by Team Member</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Member</TableHead>
+                <TableHead>Credits Used</TableHead>
+                <TableHead>Allocated</TableHead>
+                <TableHead>Utilization</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {usage.by_member.map((member) => (
+                <TableRow key={member.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Avatar src={member.avatar} size="sm" />
+                      <span>{member.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{member.credits_used.toLocaleString()}</TableCell>
+                  <TableCell>{member.allocated.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <ProgressBar 
+                      value={(member.credits_used / member.allocated) * 100}
+                      size="sm"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => allocateMoreCredits(member.id)}
+                    >
+                      Allocate More
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Usage Over Time */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Team Usage Trend</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={usage.daily}>
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Line 
+                type="monotone" 
+                dataKey="credits_used" 
+                stroke="#3b82f6" 
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+```
+
+</CodeGroup>
+
+### Best Practices
+
+<AccordionGroup>
+  <Accordion title="Offer volume bonuses that scale">
+    Create compelling reasons to buy larger packages:
+    
+    | Package | Price | Base Credits | Bonus | Total | Effective $/Credit |
+    |---------|-------|--------------|-------|-------|-------------------|
+    | 50K | $2,000 | 50,000 | 10% | 55,000 | $0.036 |
+    | 100K | $4,000 | 100,000 | 15% | 115,000 | $0.035 |
+    | 250K | $10,000 | 250,000 | 25% | 312,500 | $0.032 |
+    
+    **Psychology:** Bigger packages feel like better deals
+  </Accordion>
+
+  <Accordion title="Provide admin controls for allocation">
+    Let team admins manage their pool:
+    - Allocate credits to specific members
+    - Set per-member limits
+    - View usage reports
+    - Get low-balance alerts
+  </Accordion>
+
+  <Accordion title="Send proactive renewal reminders">
+    ```typescript
+    // Alert at 20% remaining
+    if (pool.remaining_credits / pool.total_credits < 0.2) {
+      await sendTeamAlert({
+        teamId: pool.teamId,
+        type: 'low_balance',
+        message: `Your team has ${pool.remaining_credits} credits remaining (20%). Consider purchasing more to avoid interruptions.`,
+      });
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Offer monthly recurring pool option">
+    Some teams prefer predictable monthly costs:
+    
+    ```typescript
+    // Monthly pool subscription
+    const monthlyPool = {
+      name: 'Enterprise Pool Subscription',
+      price: 999_00, // $999/month
+      credits_per_month: 25000,
+      rollover: true, // Unused credits roll over
+    };
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## 7. Custom Enterprise Pricing
+
+**Best for:** Large organizations, white-label partners  
+**Conversion rate:** 1-3% (of users), but **60-80% ACV**  
+**Example ARR:** $25,000-500,000 per account
+
+### How It Works
+
+Fully customized deals for large customers:
+- **Volume commitments:** $50K/year minimum
+- **Custom pricing:** Per-second rates negotiated
+- **Dedicated infrastructure:** Isolated GPUs, priority queuing
+- **White-label options:** Remove branding, custom domains
+- **SLAs and support:** 99.9% uptime, dedicated account manager
+
+### Real-World Examples
+
+**Synthesia Enterprise:**
+```
+Custom pricing based on:
+- Number of seats (10-1000+)
+- Minutes of video per month
+- Custom avatar development
+- API access level
+- Support tier (dedicated CSM, 24/7 support)
+
+Typical range: $30K-300K/year
+```
+
+**Runway Enterprise:**
+```
+- Dedicated GPU allocation
+- Priority processing queue
+- Custom model fine-tuning
+- White-label deployment
+- Unlimited exports
+- Custom integrations
+
+Starts at $50K/year
+```
+
+### Implementation Strategy
+
+<Note>
+Enterprise deals typically happen **outside** of self-serve checkout. However, you can still use Dodo Payments for billing and invoicing once terms are agreed.
+</Note>
+
+<CodeGroup>
+
+```typescript enterprise-products.ts
+// Create custom enterprise product (created after deal is closed)
+export async function createCustomEnterpriseProduct(
+  deal: EnterpriseDeal
+) {
+  // Create custom product based on negotiated terms
+  const product = await dodo.products.create({
+    name: `Enterprise Plan - ${deal.company_name}`,
+    price: {
+      type: 'recurring_price',
+      price: deal.annual_value / 12 * 100, // Monthly charge
+      currency: 'USD',
+      payment_frequency_count: deal.payment_frequency === 'monthly' ? 1 : 12,
+      payment_frequency_interval: deal.payment_frequency === 'monthly' ? 'Month' : 'Year',
+      subscription_period_count: 1,
+      subscription_period_interval: 'Year',
+      trial_period_days: 0,
+      discount: 0,
+      purchasing_power_parity: false,
+    },
+    tax_category: 'saas',
+    metadata: {
+      customer_type: 'enterprise',
+      company_name: deal.company_name,
+      contract_id: deal.contract_id,
+      seats: deal.seats,
+      dedicated_gpu: deal.dedicated_gpu,
+      white_label: deal.white_label,
+      sla: deal.sla_percentage,
+      custom_terms: deal.custom_terms,
+    },
+  });
+
+  return product;
+}
+```
+
+```typescript enterprise-subscription.ts
+// Create enterprise subscription with custom terms
+export async function createEnterpriseSubscription(
+  companyId: string,
+  productId: string,
+  billingContact: {
+    email: string;
+    name: string;
+    company: string;
+  }
+) {
+  const subscription = await dodo.subscriptions.create({
+    payment_link: false, // Invoice-based, not self-serve
+    product_id: productId,
+    quantity: 1,
+    customer: {
+      email: billingContact.email,
+      name: billingContact.name,
+    },
+    billing: {
+      country: 'US', // Or from deal
+    },
+    metadata: {
+      company_id: companyId,
+      billing_type: 'enterprise_invoice',
+      payment_terms: 'Net 30',
+    },
+  });
+
+  // Generate invoice instead of payment link
+  // (Dodo may support invoice generation, check their API)
+  
+  return subscription;
+}
+```
+
+```typescript usage-limits-enterprise.ts
+// Enterprise accounts often have custom usage limits
+interface EnterpriseUsageLimits {
+  companyId: string;
+  gpu_hours_per_month: number; // Dedicated GPU allocation
+  api_calls_per_month: number; // Or unlimited
+  seats: number;
+  storage_tb: number;
+  custom_features: string[]; // e.g., ['white_label', 'api_priority', 'custom_models']
+}
+
+export async function trackEnterpriseUsage(
+  companyId: string,
+  usage: {
+    gpu_seconds: number;
+    api_calls: number;
+    storage_gb: number;
+  }
+) {
+  const limits = await db.enterpriseLimits.findUnique({
+    where: { companyId }
+  });
+
+  // Track but don't enforce hard limits (enterprise gets flexibility)
+  await db.enterpriseUsage.create({
+    data: {
+      companyId,
+      gpu_seconds: usage.gpu_seconds,
+      api_calls: usage.api_calls,
+      storage_gb: usage.storage_gb,
+      timestamp: new Date(),
+    }
+  });
+
+  // Alert if approaching limits (for planning, not blocking)
+  if (usage.gpu_seconds > limits.gpu_hours_per_month * 3600 * 0.8) {
+    await alertAccountManager(companyId, {
+      type: 'approaching_limit',
+      resource: 'GPU hours',
+      current: usage.gpu_seconds / 3600,
+      limit: limits.gpu_hours_per_month,
+    });
+  }
+}
+```
+
+```tsx enterprise-sales-funnel.tsx
+// Enterprise sales flow (not self-serve)
+export function EnterpriseLandingPage() {
+  return (
+    <div>
+      <Hero>
+        <h1>Enterprise-Grade AI Video at Scale</h1>
+        <p>Dedicated infrastructure, custom pricing, white-label options</p>
+      </Hero>
+
+      <FeatureGrid>
+        <Feature 
+          icon={<Server />}
+          title="Dedicated GPU Allocation"
+          description="No shared resources. Your jobs run on dedicated hardware."
+        />
+        <Feature 
+          icon={<Shield />}
+          title="99.9% SLA"
+          description="Enterprise-grade uptime with dedicated support."
+        />
+        <Feature 
+          icon={<Palette />}
+          title="White-Label Ready"
+          description="Remove our branding, use your domain."
+        />
+        <Feature 
+          icon={<Code />}
+          title="Custom Integrations"
+          description="We'll build integrations for your specific workflow."
+        />
+      </FeatureGrid>
+
+      {/* Not a "Buy Now" button - this is high-touch sales */}
+      <ContactForm
+        title="Talk to Our Enterprise Team"
+        fields={[
+          { name: 'company_name', required: true },
+          { name: 'email', required: true },
+          { name: 'phone', required: false },
+          { name: 'expected_monthly_usage', required: true },
+          { name: 'use_case', required: true },
+        ]}
+        onSubmit={handleEnterpriseInquiry}
+      />
+    </div>
+  );
+}
+
+async function handleEnterpriseInquiry(data: any) {
+  // Create lead in CRM
+  await createSalesLead({
+    source: 'enterprise_page',
+    company: data.company_name,
+    contact: {
+      email: data.email,
+      phone: data.phone,
+    },
+    qualification: {
+      expected_usage: data.expected_monthly_usage,
+      use_case: data.use_case,
+    },
+    status: 'new',
+    assigned_to: 'enterprise_sales_team',
+  });
+
+  // Notify sales team
+  await notifySlack('#enterprise-leads', {
+    message: `New enterprise inquiry from ${data.company_name}`,
+    data: data,
+  });
+}
+```
+
+</CodeGroup>
+
+### Typical Enterprise Deal Structure
+
+```
+Phase 1: Discovery (Week 1-2)
+- Understand customer needs
+- Technical requirements gathering
+- Proof of concept
+
+Phase 2: Proposal (Week 3)
+- Custom pricing proposal
+- SLA terms
+- Infrastructure requirements
+
+Phase 3: Negotiation (Week 4-6)
+- Contract terms
+- Payment schedules
+- Custom feature development scope
+
+Phase 4: Implementation (Week 7-12)
+- Dedicated infrastructure setup
+- Custom integrations
+- White-label configuration
+- Team training
+
+Phase 5: Ongoing (Month 3+)
+- Quarterly business reviews
+- Usage optimization
+- Feature requests
+- Renewal discussions
+```
+
+### Best Practices
+
+<AccordionGroup>
+  <Accordion title="Qualify leads before engaging sales">
+    Not every inquiry is enterprise-ready:
+    
+    **Qualification criteria:**
+    - Company size: 100+ employees
+    - Budget: $25K+ annual spend
+    - Use case: Business-critical workflow
+    - Decision timeline: 3 months or less
+    
+    **Auto-qualify with form questions:**
+    ```typescript
+    if (expectedMonthlyUsage < 50000 || companySize < 100) {
+      // Redirect to self-serve Pro plan
+      return redirect('/pricing/pro');
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Offer POC/pilot program">
+    Let them test before committing:
+    
+    ```typescript
+    const pilotProgram = {
+      duration: '30 days',
+      credits: 10000,
+      features: 'all_enterprise_features',
+      dedicated_support: true,
+      cost: 0, // Free pilot
+    };
+    ```
+  </Accordion>
+
+  <Accordion title="Build annual contracts with quarterly reviews">
+    - 1-year minimum commitment
+    - Quarterly business reviews
+    - Usage analysis and optimization
+    - Feature roadmap discussions
+    - Renewal conversations start at Month 9
+  </Accordion>
+
+  <Accordion title="Price based on value, not just cost">
+    Enterprise pricing isn't just "individual × 100":
+    
+    **Value drivers:**
+    - How much revenue does this enable?
+    - What's the cost of their current solution?
+    - What's the ROI on time saved?
+    - What's the competitive advantage?
+    
+    **Example:**
+    If your tool saves them $500K/year in production costs,
+    charging $100K/year is a no-brainer.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Decision Framework: Which Model Is Right for You?
+
+Use this framework to choose the best pricing model for your AI video tool:
+
+<Steps>
+  <Step title="Define your product type">
+    **Generation-focused** (Runway, Pika, Luma)  
+    → Credit-based or Pay-per-use
+    
+    **Editing-focused** (VEED.io, Kapwing)  
+    → Freemium + Watermark or Subscription tiers
+    
+    **Avatar/corporate** (Synthesia, HeyGen)  
+    → Subscription tiers or Enterprise
+    
+    **API/platform** (Replicate, Stability AI)  
+    → Pay-per-use or Hybrid
+  </Step>
+
+  <Step title="Understand your cost structure">
+    **High & variable GPU costs** → Credit-based or Pay-per-use  
+    **Predictable infrastructure** → Subscription tiers  
+    **Low marginal cost** → Freemium + Watermark
+  </Step>
+
+  <Step title="Identify your target customer">
+    **Prosumers/creators** → Credit-based or Freemium  
+    **SMBs** → Subscription tiers  
+    **Enterprise** → Hybrid or Custom  
+    **Developers** → Pay-per-use or Hybrid
+  </Step>
+
+  <Step title="Evaluate usage patterns">
+    **Sporadic usage** → Credit-based  
+    **Consistent monthly usage** → Subscription  
+    **Unpredictable spikes** → Hybrid  
+    **High volume** → Enterprise pooling
+  </Step>
+</Steps>
+
+### Decision Matrix
+
+Answer these questions:
+
+<AccordionGroup>
+  <Accordion title="Do you need predictable revenue?">
+    **Yes** → Subscription tiers or Hybrid  
+    **No** → Credit-based or Pay-per-use
+  </Accordion>
+
+  <Accordion title="Are your GPU costs highly variable?">
+    **Yes** → Credit-based or Pay-per-use  
+    **No** → Subscription tiers
+  </Accordion>
+
+  <Accordion title="Do users need to try before buying?">
+    **Yes** → Freemium + Watermark  
+    **Maybe** → Credit-based with free starter credits  
+    **No** → Subscription with free trial
+  </Accordion>
+
+  <Accordion title="Are you targeting enterprises?">
+    **Yes** → Hybrid, Enterprise pooling, or Custom  
+    **No** → Start with simpler models
+  </Accordion>
+
+  <Accordion title="Do you have an API product?">
+    **Yes** → Pay-per-use or Hybrid  
+    **No** → Other models
+  </Accordion>
+</AccordionGroup>
+
+### Recommended Combinations
+
+Most successful AI video tools use **multiple models**:
+
+**Runway ML's approach:**
+```
+Free tier: 125 credits
+Self-serve tiers: $15-95/month (credit-based)
+Enterprise: Custom deals + volume pricing
+```
+
+**VEED.io's approach:**
+```
+Free: With watermark
+Basic: $12/month subscription
+Pro: $24/month subscription
+Enterprise: Custom
+```
+
+**Replicate's approach:**
+```
+Pay-per-use: $0.000X per second
+Enterprise: Volume commitments + discounts
+```
+
+<Tip>
+**Pro tip:** Start simple with 1-2 models, then add complexity:
+
+1. **Month 1-6:** Launch with credit-based or subscription
+2. **Month 6-12:** Add enterprise pooling for team customers
+3. **Year 2+:** Introduce hybrid model for API users
+
+Don't overcomplicate your initial launch. You can always add pricing tiers later.
+</Tip>
+
+---
+
+## Implementation Checklist
+
+Ready to implement your pricing model? Use this checklist:
+
+<Accordion title="✅ Product Setup">
+  - [ ] Create products in Dodo Payments dashboard
+  - [ ] Set up tax categories correctly
+  - [ ] Configure currency and payment methods
+  - [ ] Add product metadata for features/limits
+  - [ ] Test checkout flow end-to-end
+</Accordion>
+
+<Accordion title="✅ Usage Tracking">
+  - [ ] Implement event tracking (credits, API calls, etc.)
+  - [ ] Set up usage meters in Dodo (for metered billing)
+  - [ ] Build usage dashboard for customers
+  - [ ] Create admin analytics for usage patterns
+  - [ ] Set up low-balance/limit warnings
+</Accordion>
+
+<Accordion title="✅ Billing Infrastructure">
+  - [ ] Implement webhook handlers for payment events
+  - [ ] Handle subscription lifecycle (created, renewed, cancelled)
+  - [ ] Build credit/limit deduction logic
+  - [ ] Create invoice/receipt generation
+  - [ ] Set up failed payment retry logic
+</Accordion>
+
+<Accordion title="✅ User Experience">
+  - [ ] Clear pricing page with model comparison
+  - [ ] In-app usage meters and warnings
+  - [ ] Upgrade prompts at critical moments
+  - [ ] Self-serve plan changes
+  - [ ] Transparent cost estimators
+</Accordion>
+
+<Accordion title="✅ Enterprise Features">
+  - [ ] Team/organization account structure
+  - [ ] Credit pooling for teams
+  - [ ] Admin controls for team managers
+  - [ ] Usage reports and analytics
+  - [ ] Custom invoicing for large customers
+</Accordion>
+
+---
+
+## Key Takeaways
+
+<CardGroup cols={2}>
+  <Card title="Credit-Based" icon="coins">
+    **Best for:** Variable usage, generation-focused tools
+    
+    **Conversion:** 8-15%
+    
+    **Pros:** Aligns with GPU costs, prevents abuse
+    
+    **Cons:** Can feel complex, requires balance management
+  </Card>
+
+  <Card title="Subscription Tiers" icon="layer-group">
+    **Best for:** Predictable usage, editing tools
+    
+    **Conversion:** 5-8%
+    
+    **Pros:** Predictable revenue, easy to understand
+    
+    **Cons:** May not fit variable usage patterns
+  </Card>
+
+  <Card title="Freemium + Watermark" icon="droplet">
+    **Best for:** Editing tools, consumer-focused products
+    
+    **Conversion:** 25-34% (highest!)
+    
+    **Pros:** Incredible conversion, low barrier to entry
+    
+    **Cons:** High free tier costs if not managed
+  </Card>
+
+  <Card title="Pay-Per-Use" icon="credit-card">
+    **Best for:** API products, unpredictable usage
+    
+    **Conversion:** 15-20%
+    
+    **Pros:** Fair pricing, scales with value
+    
+    **Cons:** Can lead to bill shock without proper UX
+  </Card>
+
+  <Card title="Hybrid Model" icon="bolt">
+    **Best for:** B2B SaaS, platform businesses
+    
+    **Conversion:** 10-18%
+    
+    **Pros:** Predictable base + usage flexibility
+    
+    **Cons:** More complex to explain and implement
+  </Card>
+
+  <Card title="Enterprise Pooling" icon="building">
+    **Best for:** Team/multi-user tools
+    
+    **Conversion:** 5-10% (but 40-60% of ACV)
+    
+    **Pros:** High ACV, sticky customers
+    
+    **Cons:** Requires team management features
+  </Card>
+
+  <Card title="Custom Enterprise" icon="handshake">
+    **Best for:** Large organizations, white-label
+    
+    **Conversion:** 1-3% (but 60-80% of ACV)
+    
+    **Pros:** Massive deals, long-term contracts
+    
+    **Cons:** High-touch sales, long sales cycles
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+1. **Choose your primary model** using the decision framework
+2. **Review all code examples** in this guide specific to your model
+3. **Set up products in Dodo Payments** dashboard
+4. **Implement usage tracking** and webhooks
+5. **Build your pricing page** with clear model comparison
+6. **Launch and iterate** based on conversion data
+
+<Note>
+Need help implementing? Check out the working examples in the [ai-video-pricing-guide repository](https://github.com/yourusername/ai-video-pricing-guide) with full Next.js implementations for each pricing model.
+</Note>
+
+---
+
+**Questions or feedback?** Create an issue in the repository or reach out to the Dodo Payments team for implementation support.

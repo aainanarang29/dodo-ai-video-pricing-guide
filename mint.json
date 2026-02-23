@@ -1,0 +1,108 @@
+{
+  "name": "AI Video Pricing Guide",
+  "logo": {
+    "dark": "/assets/logo-dark.svg",
+    "light": "/assets/logo-light.svg"
+  },
+  "favicon": "/assets/favicon.png",
+  "colors": {
+    "primary": "#6366F1",
+    "light": "#818CF8",
+    "dark": "#4F46E5",
+    "anchors": {
+      "from": "#6366F1",
+      "to": "#818CF8"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "GitHub",
+      "url": "https://github.com/dodopayments/ai-video-pricing-guide"
+    },
+    {
+      "name": "Dodo Payments",
+      "url": "https://dodopayments.com"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Get Started",
+    "url": "https://dashboard.dodopayments.com"
+  },
+  "tabs": [
+    {
+      "name": "Blog",
+      "url": "blog"
+    },
+    {
+      "name": "Code Examples",
+      "url": "code-examples"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Overview",
+      "pages": [
+        "README",
+        "QUICK-START"
+      ]
+    },
+    {
+      "group": "Complete Guide",
+      "pages": [
+        "blog/complete-pricing-guide"
+      ]
+    },
+    {
+      "group": "Code Examples",
+      "pages": [
+        "code-examples/README",
+        {
+          "group": "Credit-Based Pricing",
+          "pages": [
+            "code-examples/01-credit-based/setup",
+            "code-examples/01-credit-based/purchase-flow",
+            "code-examples/01-credit-based/deduction"
+          ]
+        },
+        {
+          "group": "Subscription Tiers",
+          "pages": [
+            "code-examples/02-subscription-tiers/products",
+            "code-examples/02-subscription-tiers/usage-limits",
+            "code-examples/02-subscription-tiers/upgrades"
+          ]
+        },
+        {
+          "group": "Freemium Watermark",
+          "pages": [
+            "code-examples/03-freemium-watermark/products",
+            "code-examples/03-freemium-watermark/export-flow",
+            "code-examples/03-freemium-watermark/webhooks"
+          ]
+        }
+      ]
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/dodopayments/ai-video-pricing-guide",
+    "twitter": "https://twitter.com/dodopayments",
+    "discord": "https://discord.gg/dodopayments"
+  },
+  "analytics": {
+    "posthog": {
+      "apiKey": "placeholder-key"
+    }
+  },
+  "backgroundImage": "/assets/background.png",
+  "api": {
+    "baseUrl": "https://api.dodopayments.com",
+    "auth": {
+      "method": "bearer"
+    }
+  },
+  "openapi": [
+    {
+      "url": "https://api.dodopayments.com/openapi.json"
+    }
+  ]
+}
