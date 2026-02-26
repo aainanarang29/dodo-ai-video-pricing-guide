@@ -11,6 +11,16 @@ Build a modern text-to-speech web application that charges users per character u
   <img src="/images/chirpify-demo.png" alt="Chirpify AI Demo" />
 </Frame>
 
+<Info>
+  **Before you start, make sure you have:**
+
+  - A [Dodo Payments account](https://dashboard.dodopayments.com) (free to create)
+  - An [ElevenLabs API key](https://elevenlabs.io) (free tier available)
+  - Node.js 18+ installed locally
+  - A [Vercel account](https://vercel.com) for deployment
+  - Basic familiarity with JavaScript and REST APIs
+</Info>
+
 ## What You'll Build
 
 - A text-to-speech app powered by ElevenLabs
@@ -103,14 +113,17 @@ curl -X POST "https://test.dodopayments.com/products" \
     "description": "10,000 characters for text-to-speech",
     "price": {
       "currency": "USD",
+      "discount": 0,
       "price": 500,
+      "purchasing_power_parity": false,
       "type": "one_time_price"
     },
     "tax_category": "digital_products"
   }'
 ```
 
-<Accordion title="Create all three products">
+<Expandable title="All three cURL commands">
+
 ```bash
 # Pro Pack ($10 = 1000 cents)
 curl -X POST "https://test.dodopayments.com/products" \
@@ -121,7 +134,9 @@ curl -X POST "https://test.dodopayments.com/products" \
     "description": "50,000 characters for text-to-speech",
     "price": {
       "currency": "USD",
+      "discount": 0,
       "price": 1000,
+      "purchasing_power_parity": false,
       "type": "one_time_price"
     },
     "tax_category": "digital_products"
@@ -136,19 +151,74 @@ curl -X POST "https://test.dodopayments.com/products" \
     "description": "200,000 characters for text-to-speech",
     "price": {
       "currency": "USD",
+      "discount": 0,
       "price": 2500,
+      "purchasing_power_parity": false,
       "type": "one_time_price"
     },
     "tax_category": "digital_products"
   }'
 ```
-</Accordion>
+
+</Expandable>
 
 Save the `product_id` from each response. You'll need these for the checkout API.
 
 <Tip>
 Use `https://test.dodopayments.com` for development and `https://live.dodopayments.com` for production.
 </Tip>
+
+### Project Setup
+
+```bash
+mkdir chirpify-ai
+cd chirpify-ai
+npm init -y
+npm install dotenv
+```
+
+Create a `.env` file in your project root:
+
+<CodeGroup>
+
+```bash .env
+# Dodo Payments
+DODO_PAYMENTS_API_KEY=sk_test_your_test_key_here
+DODO_ENV=test
+
+# ElevenLabs
+ELEVENLABS_API_KEY=xi_your_elevenlabs_key_here
+
+# App URL (update for production)
+SITE_URL=http://localhost:3000
+```
+
+</CodeGroup>
+
+<Warning>
+  Never commit `.env` to version control. Add it to your `.gitignore` immediately.
+</Warning>
+
+Your `package.json`:
+
+<CodeGroup>
+
+```json package.json
+{
+  "name": "chirpify-ai",
+  "version": "1.0.0",
+  "description": "Text-to-Speech App with Per-Character Billing via Dodo Payments",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0"
+  }
+}
+```
+
+</CodeGroup>
 
 ---
 
@@ -272,6 +342,14 @@ export default async function handler(req, res) {
 <Warning>
 **Critical:** Always include `payment_link: true` in your request body. Without it, `payment_link` will be `null` in the response and users won't be able to checkout.
 </Warning>
+
+<Note>
+  The billing address and customer email are hardcoded for demo purposes. In production:
+
+  - Collect email through your auth/signup flow and pass it dynamically
+  - Let Dodo's checkout page handle billing address collection
+  - Pass authenticated user details instead of placeholder values
+</Note>
 
 ---
 
@@ -644,16 +722,78 @@ Use Dodo's test card to simulate payments in the test environment:
 | CVC | Any 3 digits (e.g., `123`) |
 | ZIP | Any 5 digits (e.g., `12345`) |
 
-### Testing Checklist
+### Full Test Flow
 
-<CheckboxGroup>
-  <Checkbox>Products created in Dodo dashboard</Checkbox>
-  <Checkbox>Checkout redirects to Dodo payment page</Checkbox>
-  <Checkbox>Test payment completes successfully</Checkbox>
-  <Checkbox>Credits update after successful payment</Checkbox>
-  <Checkbox>TTS generation deducts correct character count</Checkbox>
-  <Checkbox>Pricing modal shows when credits are insufficient</Checkbox>
-</CheckboxGroup>
+Walk through this end-to-end. If every step checks out, your integration is complete.
+
+<Steps>
+  <Step title="Use your free characters">
+    Load the app, type a short sentence, pick a voice, and hit generate.
+
+    **Expected:**
+    ```
+    ✓ Audio plays back in the browser
+    ✓ Credit counter drops from 500 → ~470 (depending on text length)
+    ✓ No payment required
+    ```
+  </Step>
+
+  <Step title="Trigger the upsell">
+    Enter text longer than your remaining balance (or just keep generating until you run out).
+
+    **Expected:**
+    ```
+    ✓ Pricing modal appears with three packs
+    ✓ No ElevenLabs API call is made
+    ✓ Credit counter shows 0 (red)
+    ```
+  </Step>
+
+  <Step title="Complete a test purchase">
+    Click the Pro Pack ($10 / 50K characters). You'll be redirected to Dodo's checkout page.
+
+    Enter the test card:
+    - Card: `4242 4242 4242 4242`
+    - Expiry: any future date
+    - CVC: any 3 digits
+
+    **Expected:**
+    ```
+    ✓ Redirected to Dodo checkout page
+    ✓ Test card accepted
+    ✓ Redirected back to your app
+    ✓ URL briefly shows ?success=true&characters=50000
+    ✓ Toast notification: "50,000 characters added!"
+    ✓ Credit counter updates to ~50,000
+    ```
+  </Step>
+
+  <Step title="Verify in Dodo dashboard">
+    Open [test.dodopayments.com](https://test.dodopayments.com), go to **Payments**.
+
+    **Expected:**
+    ```
+    ✓ Payment shows status: Succeeded
+    ✓ Amount: $10.00
+    ✓ Product: Pro Pack
+    ```
+
+    <Check>
+      If the payment shows in the dashboard and your credits updated, the integration is working end-to-end.
+    </Check>
+  </Step>
+
+  <Step title="Generate more speech">
+    Go back to the app, generate a few more clips.
+
+    **Expected:**
+    ```
+    ✓ Audio plays normally
+    ✓ Credits deduct correctly per character
+    ✓ Balance persists after page refresh
+    ```
+  </Step>
+</Steps>
 
 ---
 
